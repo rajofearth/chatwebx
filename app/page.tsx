@@ -1,28 +1,31 @@
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import Link from "next/link";
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 
-export default function Home() {
-  return (
-    <div className={cn("flex flex-col items-center justify-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]")}>
-      <main className="flex flex-col gap-[32px] items-center sm:items-start">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
-            Welcome to <span className="text-primary">ChatWebx</span>
-          </h1>
-          <p className="mt-6 text-lg max-w-2xl leading-8">
-            ChatWebx is a new generation chating platform to stay connected
-            with the world.
-          </p>
-        </div>
+export default async function Home() {
+  const supabase = await createClient()
+  const { data } = await supabase.auth.getUser()
+  const user = data.user
 
-        <Link href="/auth/sign-up">
-          <Button className="font-medium">
-            Get Started
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen px-4">
+        <h1 className="text-3xl font-bold mb-6 text-center">Welcome to ChatWebX</h1>
+        <p className="text-center mb-8 text-muted-foreground max-w-md">
+          A real-time chat application with support for global chat rooms and private messaging.
+        </p>
+        <div className="flex gap-4">
+          <Button asChild>
+            <Link href="/auth/login">Login</Link>
           </Button>
-        </Link>
+          <Button variant="outline" asChild>
+            <Link href="/auth/sign-up">Sign Up</Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
-      </main>
-    </div>
-  );
+  return redirect('/chat')
 }
