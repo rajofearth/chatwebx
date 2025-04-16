@@ -10,7 +10,7 @@
 !.yarn/releases
 !.yarn/versions
 /.idx/
-
+/.vscode/
 # testing
 /coverage
 
