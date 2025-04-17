@@ -16,6 +16,8 @@ export default function ChatPage() {
   const [selectedChat, setSelectedChat] = useState<ChatRoom | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   
+  console.log('Current selectedChat:', selectedChat)
+  
   // Check if user is authenticated and create profile if needed
   useEffect(() => {
     const checkUserAndProfile = async () => {
@@ -81,7 +83,10 @@ export default function ChatPage() {
           <ChatSidebar
             userId={user.id}
             selectedChatId={selectedChat?.id || null}
-            onSelectChat={setSelectedChat}
+            onSelectChat={(chat) => {
+              console.log('Selected chat from sidebar:', chat)
+              setSelectedChat(chat)
+            }}
             onCreateNewChat={() => setShowCreateModal(true)}
           />
         </div>
@@ -93,7 +98,7 @@ export default function ChatPage() {
             userId={user.id}
             receiverId={
               selectedChat && !selectedChat.is_global 
-                ? selectedChat.participants?.find(p => p.user_id !== user.id)?.user_id || null
+                ? selectedChat.participants?.find(p => p && p.user_id !== user.id)?.user_id || null
                 : null
             }
           />
@@ -105,20 +110,64 @@ export default function ChatPage() {
         <CreateChatModal
           userId={user.id}
           onClose={() => setShowCreateModal(false)}
-          onChatCreated={(chatId) => {
+          onChatCreated={async (chatId) => {
+            console.log('Chat created with ID:', chatId)
             setShowCreateModal(false)
-            // Fetch and select the newly created chat
+            // fetch the new chat room with participants for P2P
             const supabase = createClient()
-            supabase
-              .from('chat_rooms')
-              .select('*')
-              .eq('id', chatId)
-              .single()
-              .then(({ data }) => {
-                if (data) {
-                  setSelectedChat(data as ChatRoom)
+            try {
+              const isGlobal = await supabase
+                .from('chat_rooms')
+                .select('is_global')
+                .eq('id', chatId)
+                .single()
+                
+              if (isGlobal.data?.is_global) {
+                // Global chat - simpler fetch
+                const { data: room } = await supabase
+                  .from('chat_rooms')
+                  .select('*')
+                  .eq('id', chatId)
+                  .single()
+                  
+                if (room) {
+                  setSelectedChat({
+                    id: room.id,
+                    name: room.name,
+                    is_global: true,
+                    created_at: room.created_at,
+                  })
                 }
-              })
+              } else {
+                // P2P chat with participants
+                const { data: participants } = await supabase
+                  .from('p2p_chat_users')
+                  .select(`
+                    user_id,
+                    profiles!inner(id, user_id, email, name)
+                  `)
+                  .eq('chat_room_id', chatId)
+                  
+                const { data: room } = await supabase
+                  .from('chat_rooms')
+                  .select('*')
+                  .eq('id', chatId)
+                  .single()
+                  
+                if (room && participants) {
+                  const profilesFormatted = participants.map(p => p.profiles);
+                  setSelectedChat({
+                    id: room.id,
+                    name: room.name,
+                    is_global: false,
+                    created_at: room.created_at,
+                    participants: profilesFormatted,
+                  })
+                }
+              }
+            } catch (error) {
+              console.error('Error fetching chat room:', error)
+            }
           }}
         />
       )}

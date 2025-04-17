@@ -23,6 +23,8 @@ export function ChatSidebar({
 }: ChatSidebarProps) {
   const { chatRooms, loading } = useChatRooms(userId)
   const [filter, setFilter] = useState<'all' | 'global' | 'p2p'>('all')
+  
+  console.log('Chat rooms in sidebar:', chatRooms)
 
   const filteredChats = chatRooms.filter(chat => {
     if (filter === 'all') return true
@@ -32,11 +34,16 @@ export function ChatSidebar({
   })
 
   function getChatName(chat: ChatRoom): string {
+    console.log('Getting name for chat:', chat)
     if (chat.is_global) return chat.name
 
     // For P2P chats, show the other user's name
-    const otherUser = chat.participants?.find(p => p.user_id !== userId)
-    return otherUser?.name || otherUser?.email || chat.name
+    if (!chat.participants || chat.participants.length === 0) {
+      return chat.name || 'Private Chat'
+    }
+    
+    const otherUser = chat.participants.find(p => p && p.user_id !== userId)
+    return otherUser?.name || otherUser?.email || chat.name || 'Chat'
   }
   
   function getLatestMessagePreview(chat: ChatRoom): string {

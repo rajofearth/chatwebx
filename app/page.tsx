@@ -1,31 +1,22 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { Button } from '@/components/ui/button'
-import Link from 'next/link'
+'use client'
 
-export default async function Home() {
-  const supabase = await createClient()
-  const { data } = await supabase.auth.getUser()
-  const user = data.user
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
-  if (!user) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen px-4">
-        <h1 className="text-3xl font-bold mb-6 text-center">Welcome to ChatWebX</h1>
-        <p className="text-center mb-8 text-muted-foreground max-w-md">
-          A real-time chat application with support for global chat rooms and private messaging.
-        </p>
-        <div className="flex gap-4">
-          <Button asChild>
-            <Link href="/auth/login">Login</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/auth/sign-up">Sign Up</Link>
-          </Button>
-        </div>
+export default function Home() {
+  const router = useRouter()
+  
+  useEffect(() => {
+    // Redirect to the chat page
+    router.push('/chat')
+  }, [router])
+  
+  return (
+    <div className="flex h-screen items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+        <p className="mt-3 text-lg">Loading...</p>
       </div>
-    )
-  }
-
-  return redirect('/chat')
+    </div>
+  )
 }

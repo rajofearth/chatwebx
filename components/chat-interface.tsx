@@ -5,7 +5,7 @@ import { Message, useChatMessages } from '@/hooks/use-chat-messages'
 import { useSendMessage } from '@/hooks/use-send-message'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Send } from 'lucide-react'
+import { Send, RefreshCcw } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -17,10 +17,30 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInterfaceProps) {
-  const { messages, loading } = useChatMessages(chatRoomId)
-  const { sendMessage, sending } = useSendMessage()
+  const { messages, loading: messagesLoading, error: messagesError, refetch } = useChatMessages(chatRoomId)
+  const { sendMessage, sending, error: sendError, lastSentMessage } = useSendMessage()
   const [messageText, setMessageText] = useState('')
+  const [statusMessage, setStatusMessage] = useState<{type: 'success' | 'error', text: string} | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  console.log('ChatInterface mounted with:', { chatRoomId, userId, receiverId })
+  console.log('Current messages:', messages, 'Error:', messagesError)
+  console.log('Send message error:', sendError)
+
+  // Reset status message when chat room changes
+  useEffect(() => {
+    setStatusMessage(null)
+  }, [chatRoomId])
+
+  // Auto-clear status messages after 5 seconds
+  useEffect(() => {
+    if (statusMessage) {
+      const timer = setTimeout(() => {
+        setStatusMessage(null)
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [statusMessage])
 
   // Scroll to bottom of messages when new messages arrive
   useEffect(() => {
@@ -34,16 +54,31 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
+    setStatusMessage(null)
+    console.log('Attempting to send message:', { messageText, chatRoomId, userId, receiverId })
     if (!messageText.trim() || !chatRoomId) return
 
-    await sendMessage({
-      content: messageText,
-      chatRoomId,
-      senderId: userId,
-      receiverId
-    })
+    try {
+      const result = await sendMessage({
+        content: messageText,
+        chatRoomId,
+        senderId: userId,
+        receiverId
+      })
 
-    setMessageText('')
+      console.log('Message sent result:', result)
+      if (result) {
+        setMessageText('')
+        setStatusMessage({type: 'success', text: 'Message sent successfully'})
+        // Force refresh the messages
+        setTimeout(() => refetch(), 500)
+      } else if (sendError) {
+        setStatusMessage({type: 'error', text: `Error: ${sendError.message}`})
+      }
+    } catch (err) {
+      console.error('Error in send handler:', err)
+      setStatusMessage({type: 'error', text: 'Failed to send message'})
+    }
   }
 
   if (!chatRoomId) {
@@ -61,8 +96,35 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
 
   return (
     <div className="h-full flex flex-col">
+      <div className="p-2 bg-muted/30 flex justify-between items-center border-b">
+        <h3 className="font-medium px-2">Chat {chatRoomId}</h3>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={refetch}
+          disabled={messagesLoading}
+        >
+          <RefreshCcw className="h-4 w-4 mr-1" />
+          Refresh
+        </Button>
+      </div>
+      
       <ScrollArea ref={scrollRef} className="flex-1 p-4">
-        {loading ? (
+        {messagesError && (
+          <div className="p-3 mb-4 bg-red-50 border border-red-200 text-red-600 rounded text-sm">
+            Error loading messages: {messagesError}
+            <Button 
+              onClick={refetch} 
+              size="sm" 
+              variant="outline" 
+              className="ml-2"
+            >
+              Retry
+            </Button>
+          </div>
+        )}
+        
+        {messagesLoading ? (
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
               <div key={i} className="flex flex-col gap-2">
@@ -124,22 +186,35 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
 
       <form 
         onSubmit={handleSendMessage}
-        className="p-4 border-t flex gap-2"
+        className="p-4 border-t flex flex-col gap-2"
       >
-        <Input
-          placeholder="Type a message..."
-          value={messageText}
-          onChange={(e) => setMessageText(e.target.value)}
-          disabled={sending || !chatRoomId}
-          className="flex-1"
-        />
-        <Button 
-          type="submit"
-          size="icon"
-          disabled={sending || !messageText.trim() || !chatRoomId}
-        >
-          <Send className="h-4 w-4" />
-        </Button>
+        {statusMessage && (
+          <div className={cn(
+            "p-3 mb-2 rounded text-sm border",
+            statusMessage.type === 'success' 
+              ? "bg-green-50 border-green-200 text-green-600" 
+              : "bg-red-50 border-red-200 text-red-600"
+          )}>
+            {statusMessage.text}
+          </div>
+        )}
+        
+        <div className="flex gap-2">
+          <Input
+            placeholder="Type a message..."
+            value={messageText}
+            onChange={(e) => setMessageText(e.target.value)}
+            disabled={sending || !chatRoomId}
+            className="flex-1"
+          />
+          <Button 
+            type="submit"
+            size="icon"
+            disabled={sending || !messageText.trim() || !chatRoomId}
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
       </form>
     </div>
   )

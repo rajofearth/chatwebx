@@ -20,61 +20,80 @@ export function useChatMessages(chatRoomId: number | null) {
   const supabase = createClient()
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const fetchMessages = async () => {
     if (!chatRoomId) {
       setMessages([])
       setLoading(false)
       return
     }
 
-    async function fetchMessages() {
-      setLoading(true)
+    console.log(`Manually fetching messages for chat ${chatRoomId}`)
+    setLoading(true)
+    setError(null)
+    
+    try {
+      // First fetch messages for the chat room
+      const { data: messagesData, error: messagesError } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('chat_room_id', chatRoomId)
+        .order('created_at', { ascending: true })
       
-      try {
-        // First fetch messages for the chat room
-        const { data: messagesData, error: messagesError } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('chat_room_id', chatRoomId)
-          .order('created_at', { ascending: true })
-        
-        if (messagesError) {
-          console.error('Error fetching messages:', messagesError)
-          setLoading(false)
-          return
-        }
-        
-        // Then enhance each message with sender profile information
-        const messagesWithProfiles = await Promise.all(
-          (messagesData || []).map(async (message) => {
-            if (!message.sender_id) return message;
-            
-            const { data: profileData, error: profileError } = await supabase
-              .from('profiles')
-              .select('email, name')
-              .eq('user_id', message.sender_id)
-              .single();
-            
-            if (profileError && profileError.code !== 'PGRST116') {
-              console.error('Error fetching profile for message:', profileError);
-            }
-            
-            return {
-              ...message,
-              sender_profile: profileData || null
-            };
-          })
-        );
-        
-        setMessages(messagesWithProfiles);
-      } catch (error) {
-        console.error('Unexpected error fetching messages:', error);
-      } finally {
-        setLoading(false);
+      if (messagesError) {
+        console.error('Error fetching messages:', messagesError)
+        setError(`Error loading messages: ${messagesError.message}`)
+        setLoading(false)
+        return
       }
+      
+      console.log(`Found ${messagesData?.length || 0} messages for chat ${chatRoomId}`)
+      
+      // Then enhance each message with sender profile information
+      const messagesWithProfiles = await Promise.all(
+        (messagesData || []).map(async (message) => {
+          if (!message.sender_id) return message;
+          
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('email, name')
+            .eq('user_id', message.sender_id)
+            .single();
+          
+          if (profileError && profileError.code !== 'PGRST116') {
+            console.error('Error fetching profile for message:', profileError);
+          }
+          
+          return {
+            ...message,
+            sender_profile: profileData || null
+          };
+        })
+      );
+      
+      setMessages(messagesWithProfiles);
+    } catch (error: any) {
+      console.error('Unexpected error fetching messages:', error);
+      setError(`Unexpected error: ${error.message || 'Unknown error'}`)
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    // Reset state when chat room changes
+    setMessages([])
+    setError(null)
+    
+    if (!chatRoomId) {
+      setLoading(false)
+      return
     }
 
+    console.log(`Setting up message fetch and subscription for chat ${chatRoomId}`)
+    
+    // Fetch messages immediately
     fetchMessages()
 
     // Set up real-time subscription for new messages
@@ -86,6 +105,7 @@ export function useChatMessages(chatRoomId: number | null) {
         table: 'messages',
         filter: `chat_room_id=eq.${chatRoomId}`
       }, async (payload) => {
+        console.log(`New message received for chat ${chatRoomId}:`, payload)
         try {
           // Fetch the sender profile for the new message
           const { data: senderData, error: senderError } = await supabase
@@ -108,12 +128,15 @@ export function useChatMessages(chatRoomId: number | null) {
           console.error('Error processing new message:', error)
         }
       })
-      .subscribe()
+      .subscribe((status) => {
+        console.log(`Subscription status for chat ${chatRoomId}:`, status)
+      })
 
     return () => {
+      console.log(`Cleaning up subscription for chat ${chatRoomId}`)
       supabase.removeChannel(channel)
     }
   }, [chatRoomId, supabase])
 
-  return { messages, loading }
+  return { messages, loading, error, refetch: fetchMessages }
 } 

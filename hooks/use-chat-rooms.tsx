@@ -36,59 +36,88 @@ export function useChatRooms(userId: string) {
       setLoading(true)
       
       try {
-        // Fetch global chat rooms
+        // Fetch global chats and p2p chats separately to avoid OR syntax
         const { data: globalChats, error: globalError } = await supabase
           .from('chat_rooms')
           .select('*')
-          .eq('is_global', true)
+          .eq('is_global', true);
         
-        if (globalError) {
-          console.error('Error fetching global chats:', globalError)
-        }
-
-        // Fetch P2P chat rooms for the current user
-        const { data: p2pChats, error: p2pError } = await supabase
-          .from('chat_rooms')
-          .select(`
-            *,
-            p2p_chat_users!inner(user_id)
-          `)
-          .eq('p2p_chat_users.user_id', userId)
-          .eq('is_global', false)
-        
-        if (p2pError) {
-          console.error('Error fetching p2p chats:', p2pError)
-        }
-
-        // For each P2P chat, fetch the other user's profile
-        const p2pChatsWithProfiles = await Promise.all((p2pChats || []).map(async (room) => {
-          const { data: participants, error: participantsError } = await supabase
-            .from('p2p_chat_users')
-            .select(`
-              user_id,
-              profiles!inner(id, user_id, email, name)
-            `)
-            .eq('chat_room_id', room.id)
+        if (globalError) console.error('Error fetching global chats:', globalError);
           
-          if (participantsError) {
-            console.error('Error fetching participants:', participantsError)
-            return room
+        // Fetch user's p2p chats
+        const { data: userChats, error: userChatsError } = await supabase
+          .from('p2p_chat_users')
+          .select('chat_room_id')
+          .eq('user_id', userId);
+          
+        if (userChatsError) console.error('Error fetching user chats:', userChatsError);
+        
+        // If user has p2p chats, fetch the full chat rooms
+        let p2pChats = [];
+        if (userChats && userChats.length > 0) {
+          const chatIds = userChats.map(c => c.chat_room_id);
+          const { data: rooms, error: roomsError } = await supabase
+            .from('chat_rooms')
+            .select('*')
+            .in('id', chatIds)
+            .eq('is_global', false);
+            
+          if (roomsError) console.error('Error fetching p2p rooms:', roomsError);
+          p2pChats = rooms || [];
+        }
+        
+        // Combine the results
+        const allRooms = [...(globalChats || []), ...(p2pChats || [])];
+        
+        // Now enhance each room with participants for p2p chats
+        const roomsWithParticipants = await Promise.all(allRooms.map(async (room) => {
+          if (!room.is_global) {
+            try {
+              // First get all users in this chat
+              const { data: chatUsers, error: chatUsersError } = await supabase
+                .from('p2p_chat_users')
+                .select('user_id')
+                .eq('chat_room_id', room.id);
+                
+              if (chatUsersError) {
+                console.error(`Error fetching users for room ${room.id}:`, chatUsersError);
+                return { ...room, participants: [] };
+              }
+              
+              if (!chatUsers || chatUsers.length === 0) {
+                return { ...room, participants: [] };
+              }
+              
+              // Then fetch profiles for those users
+              const userIds = chatUsers.map(u => u.user_id);
+              const { data: profiles, error: profilesError } = await supabase
+                .from('profiles')
+                .select('id, user_id, email, name')
+                .in('user_id', userIds);
+                
+              if (profilesError) {
+                console.error(`Error fetching profiles for room ${room.id}:`, profilesError);
+                return { ...room, participants: [] };
+              }
+              
+              return {
+                ...room,
+                participants: profiles || []
+              };
+            } catch (err) {
+              console.error(`Error processing participants for room ${room.id}:`, err);
+              return { ...room, participants: [] };
+            }
           }
-
-          // Convert the nested structure to a flat array of profiles
-          const profiles = participants.map(p => p.profiles) as unknown as Profile[]
           
           return {
             ...room,
-            participants: profiles
-          }
-        }))
-
-        // Combine global and P2P chats
-        const allChats = [...(globalChats || []), ...p2pChatsWithProfiles]
+            participants: []
+          };
+        }));
         
         // Fetch latest message for each chat
-        const enhancedChats = await Promise.all(allChats.map(async (chat) => {
+        const enhancedChats = await Promise.all(roomsWithParticipants.map(async (chat) => {
           try {
             const { data: latestMessage, error: messageError } = await supabase
               .from('messages')
@@ -97,7 +126,7 @@ export function useChatRooms(userId: string) {
               .order('created_at', { ascending: false })
               .limit(1)
               .single()
-              
+            
             if (messageError && messageError.code !== 'PGRST116') {
               console.error(`Error fetching latest message for chat ${chat.id}:`, messageError)
             }

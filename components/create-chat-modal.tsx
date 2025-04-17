@@ -27,6 +27,7 @@ export function CreateChatModal({ userId, onClose, onChatCreated }: CreateChatMo
   const [users, setUsers] = useState<Profile[]>([])
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [loadingUsers, setLoadingUsers] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   
   // Fetch users for P2P chat
   useEffect(() => {
@@ -101,7 +102,9 @@ export function CreateChatModal({ userId, onClose, onChatCreated }: CreateChatMo
     if (chatType === 'global' && !globalChatName.trim()) return
     if (chatType === 'p2p' && !selectedUserId) return
     
+    console.log('Creating chat:', { chatType, globalChatName, selectedUserId })
     setLoading(true)
+    setErrorMessage(null)
     
     try {
       // For P2P chats, check if a chat already exists with this user
@@ -109,6 +112,7 @@ export function CreateChatModal({ userId, onClose, onChatCreated }: CreateChatMo
         const existingChatId = await checkExistingChat(selectedUserId);
         
         if (existingChatId) {
+          console.log('Found existing chat:', existingChatId)
           // If chat already exists, just open it
           onChatCreated(existingChatId);
           return;
@@ -122,6 +126,7 @@ export function CreateChatModal({ userId, onClose, onChatCreated }: CreateChatMo
           .single();
           
         const chatName = otherUserProfile?.name || otherUserProfile?.email || `Chat with user`;
+        console.log('Creating P2P chat with name:', chatName)
         
         // Create the chat room
         const { data: chatRoom, error: chatRoomError } = await supabase
@@ -133,22 +138,46 @@ export function CreateChatModal({ userId, onClose, onChatCreated }: CreateChatMo
           .select()
           .single()
         
-        if (chatRoomError) throw chatRoomError
+        if (chatRoomError) {
+          console.error('Error creating chat room:', chatRoomError)
+          setErrorMessage(`Error creating chat room: ${chatRoomError.message}`)
+          throw chatRoomError
+        }
         
-        // Add both users to the chat room
-        const p2pUsers = [
-          { chat_room_id: chatRoom.id, user_id: userId },
-          { chat_room_id: chatRoom.id, user_id: selectedUserId }
-        ]
+        console.log('Created chat room:', chatRoom)
         
-        const { error: p2pError } = await supabase
+        // Try to add just one user first - important for debugging
+        const { error: firstUserError } = await supabase
           .from('p2p_chat_users')
-          .insert(p2pUsers)
+          .insert({
+            chat_room_id: chatRoom.id,
+            user_id: userId
+          })
         
-        if (p2pError) throw p2pError
+        if (firstUserError) {
+          console.error('Error adding first user to chat:', firstUserError)
+          setErrorMessage(`Error adding you to chat: ${firstUserError.message}`)
+          throw firstUserError
+        }
         
+        // Now try adding the second user
+        const { error: secondUserError } = await supabase
+          .from('p2p_chat_users')
+          .insert({
+            chat_room_id: chatRoom.id,
+            user_id: selectedUserId
+          })
+        
+        if (secondUserError) {
+          console.error('Error adding second user to chat:', secondUserError)
+          setErrorMessage(`Error adding other user to chat: ${secondUserError.message}`)
+          throw secondUserError
+        }
+        
+        console.log('Users added to chat successfully')
         onChatCreated(chatRoom.id)
       } else if (chatType === 'global') {
+        console.log('Creating global chat with name:', globalChatName)
         // Create a global chat room
         const { data: chatRoom, error: chatRoomError } = await supabase
           .from('chat_rooms')
@@ -159,8 +188,12 @@ export function CreateChatModal({ userId, onClose, onChatCreated }: CreateChatMo
           .select()
           .single()
         
-        if (chatRoomError) throw chatRoomError
+        if (chatRoomError) {
+          console.error('Error creating global chat:', chatRoomError)
+          throw chatRoomError
+        }
         
+        console.log('Created global chat:', chatRoom)
         onChatCreated(chatRoom.id)
       }
     } catch (error) {
@@ -275,16 +308,23 @@ export function CreateChatModal({ userId, onClose, onChatCreated }: CreateChatMo
           </Tabs>
         </div>
         
-        <div className="p-4 border-t flex justify-end space-x-2">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleCreateChat}
-            disabled={loading || (chatType === 'global' && !globalChatName.trim()) || (chatType === 'p2p' && !selectedUserId)}
-          >
-            {loading ? 'Creating...' : 'Create Chat'}
-          </Button>
+        <div className="p-4 border-t flex flex-col">
+          {errorMessage && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded text-sm">
+              {errorMessage}
+            </div>
+          )}
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateChat}
+              disabled={loading || (chatType === 'global' && !globalChatName.trim()) || (chatType === 'p2p' && !selectedUserId)}
+            >
+              {loading ? 'Creating...' : 'Create Chat'}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
