@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
+import { Profile } from '@/hooks/use-chat-rooms'
 
 export interface Message {
   id: number
@@ -54,7 +55,7 @@ export function useChatMessages(chatRoomId: number | null) {
           
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('email, name')
+            .select('email, name, profile_picture')
             .eq('user_id', message.sender_id)
             .single();
           
@@ -107,7 +108,7 @@ export function useChatMessages(chatRoomId: number | null) {
           // Fetch the sender profile for the new message
           const { data: senderData, error: senderError } = await supabase
             .from('profiles')
-            .select('email, name')
+            .select('email, name, profile_picture')
             .eq('user_id', payload.new.sender_id)
             .single()
           
