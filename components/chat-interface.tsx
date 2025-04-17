@@ -70,13 +70,18 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
     }
   }, [statusMessage])
 
-  // Scroll to bottom of messages when new messages arrive
-  useEffect(() => {
+  // Function to scroll to the bottom
+  const scrollToBottom = () => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTo({
-        top: scrollRef.current.scrollHeight,
-        behavior: 'smooth',
-      })
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  };
+
+  // Scroll to bottom of messages when messages change
+  useEffect(() => {
+    if (messages.length > 0 && !messagesLoading) {
+      console.log("scrolling to bottom");
+      scrollToBottom();
     }
   }, [messages])
 
@@ -89,15 +94,14 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
     try {
       const result = await sendMessage({
         content: messageText,
-        chatRoomId,
-        senderId: userId,
-        receiverId
+        chatRoomId, 
+        senderId: userId, 
+        receiverId,
       })
 
       console.log('Message sent result:', result)
       if (result) {
-        setMessageText('')
-        setStatusMessage({type: 'success', text: 'Message sent successfully'})
+        setMessageText(''); setStatusMessage({type: 'success', text: 'Message sent successfully'})
         // Force refresh the messages
         setTimeout(() => refetch(), 500)
       } else if (sendError) {
@@ -125,7 +129,7 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
 
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       <div className="p-2 bg-muted/30 flex justify-between items-center border-b">
         <div className="font-medium px-2">{chatTitle}</div>
         <Button 
@@ -140,21 +144,16 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
         
       </div>
       
-      <ScrollArea ref={scrollRef} className="flex-1 p-4">
+      <ScrollArea ref={scrollRef} className="flex-1 p-4 overflow-y-auto">
         {messagesError && (
           <div className="p-3 mb-4 bg-red-50 border border-red-200 text-red-600 rounded text-sm">
             Error loading messages: {messagesError}
-            <Button 
-              onClick={refetch} 
-              size="sm" 
-              variant="outline" 
-              className="ml-2"
-            >
+            <Button onClick={refetch} size="sm" variant="outline" className="ml-2">
               Retry
             </Button>
           </div>
         )}
-        
+
         {messagesLoading ? (
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
@@ -167,44 +166,44 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
               </div>
             ))}
           </div>
-        ) : messages.length === 0 ? (
-          <div className="h-full flex items-center justify-center">
-            <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
-          </div>
-        ) : (
+        ) : messages.length > 0 ? (
           <div className="space-y-4">
             {messages.map((message, index) => {
-              const isCurrentUser = message.sender_id === userId
-              const prevMessage = index > 0 ? messages[index - 1] : null
-              const showSender = 
-                !prevMessage || 
-                prevMessage.sender_id !== message.sender_id || 
-                new Date(message.created_at).getTime() - new Date(prevMessage.created_at).getTime() > 5 * 60 * 1000
+              const isCurrentUser = message.sender_id === userId;
+              const prevMessage = index > 0 ? messages[index - 1] : null;
+              const showSender =
+                !prevMessage ||
+                prevMessage.sender_id !== message.sender_id ||
+                new Date(message.created_at).getTime() - new Date(prevMessage.created_at).getTime() > 5 * 60 * 1000;
 
               return (
-                <div 
+                <div
                   key={message.id}
                   className={cn(
                     "flex",
                     isCurrentUser ? "justify-end" : "justify-start"
                   )}
                 >
-                  <div className={cn(
-                    "max-w-[75%] rounded-lg p-3",
-                    isCurrentUser 
-                      ? "bg-primary text-primary-foreground rounded-br-none" 
-                      : "bg-muted text-foreground rounded-bl-none"
-                  )}>
+                  <div
+                    className={cn(
+                      "max-w-[75%] rounded-lg p-3",
+                      isCurrentUser
+                        ? "bg-primary text-primary-foreground rounded-br-none"
+                        : "bg-muted text-foreground rounded-bl-none"
+                    )}
+                  >
                     {showSender && !isCurrentUser && (
                       <div className="mb-1 text-xs font-medium">
-                        {message.sender_profile?.name || message.sender_profile?.email || 'Unknown user'}
+                        {message.sender_profile?.name ||
+                          message.sender_profile?.email ||
+                          "Unknown user"}
                       </div>
                     )}
                     <div className="text-sm">{message.content}</div>
                     <div className="mt-1 text-xs opacity-70 text-right">
-                      {new Date(message.created_at).toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit',
+                      {new Date(message.created_at).toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                     </div>
                   </div>
@@ -212,18 +211,22 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
               )
             })}
           </div>
-        )}
+        ) : (
+          <div className="h-full flex items-center justify-center">
+            <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
+          </div>
+        )}        
       </ScrollArea>
 
       <form 
         onSubmit={handleSendMessage}
-        className="p-4 border-t flex flex-col gap-2"
+        className="p-4 border-t flex flex-col gap-2 sticky bottom-0 bg-background"
       >
         {statusMessage && (
           <div className={cn(
             "p-3 mb-2 rounded text-sm border",
-            statusMessage.type === 'success' 
-              ? "bg-green-50 border-green-200 text-green-600" 
+            statusMessage.type === 'success'
+              ? "bg-green-50 border-green-200 text-green-600"
               : "bg-red-50 border-red-200 text-red-600"
           )}>
             {statusMessage.text}
@@ -249,4 +252,4 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
       </form>
     </div>
   )
-} 
+}
