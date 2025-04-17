@@ -133,7 +133,7 @@ export function useChatRooms(userId: string) {
 
     fetchChatRooms()
 
-    // Set up real-time subscription for new messages to update latest message
+    // Set up real-time subscriptions for messages, chat_rooms, and p2p_chat_users
     const channel = supabase
       .channel('chat_updates')
       .on('postgres_changes', {
@@ -165,6 +165,22 @@ export function useChatRooms(userId: string) {
             return new Date(bTimestamp).getTime() - new Date(aTimestamp).getTime();
           });
         });
+      })
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_rooms'
+      }, () => {
+        fetchChatRooms();
+      })
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'p2p_chat_users'
+      }, (payload) => {
+        if (payload.new.user_id === userId) {
+          fetchChatRooms();
+        }
       })
       .subscribe();
     
