@@ -144,7 +144,7 @@ export default function ChatPage() {
                   .from('p2p_chat_users')
                   .select(`
                     user_id,
-                    profiles!inner(id, user_id, email, name)
+                    profiles!inner(id, user_id, email, name, profile_picture)
                   `)
                   .eq('chat_room_id', chatId)
                   
