@@ -6,17 +6,21 @@ import { useChatRooms, ChatRoom } from '@/hooks/use-chat-rooms'
 import { useSendMessage } from '@/hooks/use-send-message'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Send, ChevronDown, Globe, User2 } from 'lucide-react'
+import { Send, ChevronDown, Globe, User2, Smile } from 'lucide-react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import { Profile } from '@/hooks/use-chat-rooms'
 import { Skeleton } from '@/components/ui/skeleton'
+import dynamic from 'next/dynamic'
 
 interface ChatInterfaceProps {
   chatRoomId: number | null
   userId: string
   receiverId?: string | null
 }
+
+// Dynamic import of emoji picker to avoid SSR issues
+const Picker = dynamic(() => import('emoji-picker-react'), { ssr: false })
 
 export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInterfaceProps) {
   const { chatRooms: allChatRooms, loading: allChatRoomsLoading } = useChatRooms(userId)
@@ -50,6 +54,7 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
   const [messageText, setMessageText] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showScrollButton, setShowScrollButton] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 
   console.log('ChatInterface mounted with:', { chatRoomId, userId, receiverId })
   console.log('Current messages:', messages, 'Error:', messagesError)
@@ -234,7 +239,26 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
         onSubmit={handleSendMessage}
         className="p-4 border-t flex flex-col gap-2 sticky bottom-0 bg-background"
       >
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-end relative">
+          {/* Emoji picker toggle button */}
+          <button
+            type="button"
+            onClick={() => setShowEmojiPicker((prev) => !prev)}
+            className="p-2 rounded hover:bg-muted/20"
+          >
+            <Smile className="w-5 h-5 text-gray-500" />
+          </button>
+          {/* Emoji picker popup */}
+          {showEmojiPicker && (
+            <div className="absolute bottom-12 left-0 z-20">
+              <Picker
+                onEmojiClick={(emojiData) => {
+                  setMessageText((prev) => prev + emojiData.emoji)
+                  setShowEmojiPicker(false)
+                }}
+              />
+            </div>
+          )}
           <Input
             placeholder="Type a message..."
             value={messageText}
