@@ -162,14 +162,30 @@ export function useRealtimeChat({ roomName, username, tableId }: UseRealtimeChat
       // If we're using database persistence and have a tableId, save to database too
       if (tableId) {
         try {
-          await supabase.from('messages').insert({
-            chat_room_id: tableId,
-            content: content,
-            sender_id: null, // This should be the actual user ID in a real app
-            created_at: message.createdAt
-          })
-        } catch (error) {
-          console.error('Error saving message to database:', error)
+          // Get the current authenticated user
+          const { data: { user } } = await supabase.auth.getUser()
+          
+          if (!user) {
+            console.error('No authenticated user found')
+            return
+          }
+          
+          const { data: insertedMsg, error: insertError } = await supabase
+            .from('messages')
+            .insert({
+              chat_room_id: tableId,
+              content,
+              sender_id: user.id,
+              created_at: message.createdAt
+            })
+            .select()
+            .single()
+          
+          if (insertError) {
+            console.error('Supabase error inserting message:', insertError.code, insertError.message, insertError.details)
+          }
+        } catch (err) {
+          console.error('Error saving message to database:', err)
         }
       }
     },

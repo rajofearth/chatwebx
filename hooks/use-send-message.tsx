@@ -51,7 +51,7 @@ export function useSendMessage() {
       
       console.log(`Chat room ${chatRoomId} is ${isGlobal ? 'global' : 'private'}, using receiverId:`, finalReceiverId);
 
-      const { data, error } = await supabase
+      const { data: insertData, error: insertError } = await supabase
         .from('messages')
         .insert({
           content,
@@ -61,14 +61,15 @@ export function useSendMessage() {
         })
         .select()
 
-      if (error) {
-        console.error('Supabase error sending message:', error)
-        throw error
+      if (insertError) {
+        console.error('Supabase error inserting message:', insertError.code, insertError.message, insertError.details)
+        throw insertError
       }
       
-      console.log('Message sent successfully:', data)
-      setLastSentMessage(data?.[0] || null)
-      return data
+      const newMessage = insertData && insertData[0]
+      console.log('Message sent successfully:', newMessage)
+      setLastSentMessage(newMessage)
+      return newMessage
     } catch (err) {
       setError(err as Error)
       console.error('Error sending message:', err)
