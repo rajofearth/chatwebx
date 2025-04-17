@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 import { Profile } from '@/hooks/use-chat-rooms'
 import { Skeleton } from '@/components/ui/skeleton'
 import dynamic from 'next/dynamic'
+import { Theme } from 'emoji-picker-react'
 
 interface ChatInterfaceProps {
   chatRoomId: number | null
@@ -252,6 +253,7 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
           {showEmojiPicker && (
             <div className="absolute bottom-12 left-0 z-20">
               <Picker
+                theme={Theme.DARK}
                 onEmojiClick={(emojiData) => {
                   setMessageText((prev) => prev + emojiData.emoji)
                   setShowEmojiPicker(false)
