@@ -17,6 +17,7 @@ interface RealtimeChatProps {
   username: string
   onMessage?: (messages: ChatMessage[]) => void
   messages?: ChatMessage[]
+  chatRoomId?: number // Add optional chatRoomId for database subscription
 }
 
 /**
@@ -25,6 +26,7 @@ interface RealtimeChatProps {
  * @param username - The username of the user
  * @param onMessage - The callback function to handle the messages. Useful if you want to store the messages in a database.
  * @param messages - The messages to display in the chat. Useful if you want to display messages from a database.
+ * @param chatRoomId - Optional database chat room ID for persistence
  * @returns The chat component
  */
 export const RealtimeChat = ({
@@ -32,6 +34,7 @@ export const RealtimeChat = ({
   username,
   onMessage,
   messages: initialMessages = [],
+  chatRoomId,
 }: RealtimeChatProps) => {
   const { containerRef, scrollToBottom } = useChatScroll()
 
@@ -42,6 +45,7 @@ export const RealtimeChat = ({
   } = useRealtimeChat({
     roomName,
     username,
+    tableId: chatRoomId, // Pass the chatRoomId as tableId to enable DB subscription
   })
   const [newMessage, setNewMessage] = useState('')
 
