@@ -6,7 +6,8 @@ import { useChatRooms, ChatRoom } from '@/hooks/use-chat-rooms'
 import { useSendMessage } from '@/hooks/use-send-message'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Send, ChevronDown } from 'lucide-react'
+import { Send, ChevronDown, Globe, User2 } from 'lucide-react'
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import { Profile } from '@/hooks/use-chat-rooms'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -53,6 +54,13 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
   console.log('ChatInterface mounted with:', { chatRoomId, userId, receiverId })
   console.log('Current messages:', messages, 'Error:', messagesError)
   console.log('Send message error:', sendError)
+
+  // Compute avatar for P2P chat header
+  const chatAvatarUrl = useMemo(() => {
+    if (!chatRoom || chatRoom.is_global) return null
+    const other = chatRoom.participants?.find(p => p.user_id !== userId)
+    return other?.profile_picture || null
+  }, [chatRoom, userId])
 
   // Function to scroll to the bottom of the chat
   const scrollToBottom = () => {
@@ -114,9 +122,23 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="p-2 bg-muted/30 flex justify-between items-center border-b">
+      <div className="p-2 bg-muted/30 flex items-center border-b">
+        <div className="mr-2">
+          {chatAvatarUrl ? (
+            <Image
+              src={chatAvatarUrl}
+              alt="avatar"
+              width={32}
+              height={32}
+              className="rounded-full"
+            />
+          ) : chatRoom?.is_global ? (
+            <Globe className="w-6 h-6 text-primary" />
+          ) : (
+            <User2 className="w-6 h-6 text-primary" />
+          )}
+        </div>
         <div className="font-medium px-2">{chatTitle}</div>
-        {/* Realtime subscription auto-updates messages; manual refresh removed */}
       </div>
       
       {/* Messages container with auto-scroll */}

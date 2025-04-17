@@ -10,7 +10,7 @@ export interface Message {
   chat_room_id: number
   content: string
   created_at: string,
-  sender_profile?: { email: string | null, name: string | null }
+  sender_profile?: Profile & { profile_picture?: string }
 }
 
 export function useChatMessages(chatRoomId: number | null) {

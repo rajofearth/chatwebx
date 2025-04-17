@@ -7,7 +7,7 @@ import { Plus, Globe, User2, MessageSquare } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { Input } from '@/components/ui/input'
+import Image from 'next/image'
 
 interface ChatSidebarProps {
   userId: string
@@ -24,17 +24,23 @@ export function ChatSidebar({
 }: ChatSidebarProps) {
   const { chatRooms, loading } = useChatRooms(userId)
   const [filter, setFilter] = useState<'all' | 'global' | 'p2p'>('all')
-  const [search, setSearch] = useState('')
   
   console.log('Chat rooms in sidebar:', chatRooms)
 
   const filteredChats = chatRooms.filter(chat => {
-    if (search && !getChatName(chat).toLowerCase().includes(search.toLowerCase())) return false
     if (filter === 'all') return true
     if (filter === 'global') return chat.is_global
     if (filter === 'p2p') return !chat.is_global
     return true
   })
+
+  // Helper to get avatar URL for P2P chats
+  function getChatAvatar(chat: ChatRoom): string | null {
+    if (chat.is_global) return null
+    if (!chat.participants || chat.participants.length === 0) return null
+    const other = chat.participants.find(p => p && p.user_id !== userId)
+    return other?.profile_picture || null
+  }
 
   function getChatName(chat: ChatRoom): string {
     console.log('Getting name for chat:', chat)
@@ -80,23 +86,48 @@ export function ChatSidebar({
   }
 
   return (
-    <aside className="h-full flex flex-col bg-white dark:bg-gray-800 shadow-lg">
-      {/* Header */}
-      <div className="sticky top-0 z-10 p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Chats</h2>
-        <Button size="icon" variant="outline" onClick={onCreateNewChat}>
-          <Plus className="w-5 h-5" />
+    <div className="h-full flex flex-col border-r bg-background">
+      <div className="p-4 border-b">
+        <h2 className="text-lg font-semibold">Chat</h2>
+        <div className="flex mt-2 space-x-2">
+          <Button
+            variant={filter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilter('all')}
+            className="flex-1"
+          >
+            <MessageSquare className="w-4 h-4 mr-1" />
+            All
+          </Button>
+          <Button
+            variant={filter === 'global' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilter('global')}
+            className="flex-1"
+          >
+            <Globe className="w-4 h-4 mr-1" />
+            Global
+          </Button>
+          <Button
+            variant={filter === 'p2p' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilter('p2p')}
+            className="flex-1"
+          >
+            <User2 className="w-4 h-4 mr-1" />
+            Private
+          </Button>
+        </div>
+        <Button 
+          onClick={onCreateNewChat}
+          className="w-full mt-2"
+          variant="outline"
+        >
+          <Plus className="w-4 h-4 mr-1" />
+          New Chat
         </Button>
       </div>
-      {/* Search */}
-      <div className="p-2 border-b border-gray-200 dark:border-gray-700">
-        <Input
-          placeholder="Search chats..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full"
-        />
-      </div>
+      
       <ScrollArea className="flex-1">
         {loading ? (
           <div className="p-4 space-y-3">
@@ -115,34 +146,52 @@ export function ChatSidebar({
             No chats found
           </div>
         ) : (
-          <div className="p-2 space-y-1">
+          <div className="p-2">
             {filteredChats.map(chat => (
-              <button
+              <Button
                 key={chat.id}
-                onClick={() => onSelectChat(chat)}
+                variant="ghost"
                 className={cn(
-                  'w-full flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition',
-                  selectedChatId === chat.id && 'bg-primary/10'
+                  'w-full justify-start mb-1 p-3',
+                  selectedChatId === chat.id && 'bg-accent'
                 )}
+                onClick={() => onSelectChat(chat)}
               >
-                {chat.is_global ? (
-                  <Globe className="w-5 h-5 text-primary" />
-                ) : (
-                  <User2 className="w-5 h-5 text-primary" />
-                )}
-                <div className="ml-3 flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate text-gray-900 dark:text-gray-100">
-                    {getChatName(chat)}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {getLatestMessagePreview(chat)}
-                  </div>
+                <div className="mr-2">
+                  {getChatAvatar(chat) ? (
+                    <Image
+                      src={getChatAvatar(chat)!}
+                      alt="avatar"
+                      width={32}
+                      height={32}
+                      className="rounded-full"
+                    />
+                  ) : chat.is_global ? (
+                    <Globe className="w-5 h-5 text-primary" />
+                  ) : (
+                    <User2 className="w-5 h-5 text-primary" />
+                  )}
                 </div>
-              </button>
+                <div className="flex flex-col items-start flex-1 min-w-0">
+                  <div className="flex justify-between w-full items-center">
+                    <span className="font-medium truncate">
+                      {getChatName(chat)}
+                    </span>
+                    {chat.latest_message && (
+                      <span className="text-xs text-muted-foreground ml-2 whitespace-nowrap">
+                        {getTimeAgo(chat.latest_message.created_at)}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground truncate w-full text-left">
+                    {getLatestMessagePreview(chat)}
+                  </span>
+                </div>
+              </Button>
             ))}
           </div>
         )}
       </ScrollArea>
-    </aside>
+    </div>
   )
 } 

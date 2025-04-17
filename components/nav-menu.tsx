@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { HomeIcon, MessageSquare, LogOut } from 'lucide-react'
+import { HomeIcon, MessageSquare, User, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LogoutButton } from '@/components/logout-button'
 
@@ -22,6 +22,12 @@ export function NavMenu() {
       href: '/chat',
       icon: <MessageSquare className="h-5 w-5" />,
       activePattern: /^\/chat/
+    },
+    {
+      label: 'Profile',
+      href: '/profile',
+      icon: <User className="h-5 w-5" />,
+      activePattern: /^\/profile/
     }
   ]
   

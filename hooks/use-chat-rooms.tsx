@@ -20,6 +20,7 @@ export interface Profile {
   user_id: string
   email: string | null
   name: string | null
+  profile_picture: string | null
 }
 
 export function useChatRooms(userId: string) {
@@ -92,7 +93,7 @@ export function useChatRooms(userId: string) {
               const userIds = chatUsers.map(u => u.user_id);
               const { data: profiles, error: profilesError } = await supabase
                 .from('profiles')
-                .select('id, user_id, email, name')
+                .select('id, user_id, email, name, profile_picture')
                 .in('user_id', userIds);
                 
               if (profilesError) {
