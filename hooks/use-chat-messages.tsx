@@ -9,11 +9,8 @@ export interface Message {
   receiver_id: string | null
   chat_room_id: number
   content: string
-  created_at: string
-  sender_profile?: {
-    email: string | null
-    name: string | null
-  }
+  created_at: string,
+  sender_profile?: { email: string | null, name: string | null }
 }
 
 export function useChatMessages(chatRoomId: number | null) {
@@ -118,10 +115,10 @@ export function useChatMessages(chatRoomId: number | null) {
             console.error('Error fetching sender profile:', senderError)
           }
           
-          const newMessage: Message = {
-            ...payload.new,
-            sender_profile: senderData || null
-          }
+          const newMessage = {
+            ...senderData && {sender_profile: senderData}
+            ,...payload.new
+          } as Message
           
           setMessages(prev => [...prev, newMessage])
         } catch (error) {

@@ -1,13 +1,15 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { Message, useChatMessages } from '@/hooks/use-chat-messages'
+import { useState, useRef, useEffect, useMemo, use } from 'react'
+import { Message, useChatMessages, } from '@/hooks/use-chat-messages'
+import { useChatRooms, ChatRoom } from '@/hooks/use-chat-rooms'
 import { useSendMessage } from '@/hooks/use-send-message'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Send, RefreshCcw } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
+import { Profile } from '@/hooks/use-chat-rooms'
 import { Skeleton } from '@/components/ui/skeleton'
 
 interface ChatInterfaceProps {
@@ -17,6 +19,32 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInterfaceProps) {
+  const { chatRooms: allChatRooms, loading: allChatRoomsLoading } = useChatRooms(userId)
+  const chatRoom = useMemo(() => allChatRooms.find(c => c.id === chatRoomId), [allChatRooms, chatRoomId]);
+
+  // Determine the chat title
+  const chatTitle = useMemo(() => {
+    if (allChatRoomsLoading) {
+      return `Loading...`;
+    }
+
+    if (!chatRoom) {
+        return `Loading...`
+    }
+
+   if (!chatRoom.is_global) {
+      // P2P chat: Find the other user's name if there are any rooms
+      const otherUser = chatRoom.participants?.find(user => user.user_id !== userId);
+      if (otherUser) {
+        return otherUser.name || otherUser.email || 'P2P Chat';
+      } else {
+        return 'Unknown P2P Chat'; // Fallback if no other user is found (shouldn't normally happen)
+      }
+    } else {
+      // Global chat: use the group name
+      return chatRoom?.name || `Global Chat ${chatRoomId}`;
+    }
+  }, [allChatRoomsLoading, chatRoom, userId, chatRoomId]);
   const { messages, loading: messagesLoading, error: messagesError, refetch } = useChatMessages(chatRoomId)
   const { sendMessage, sending, error: sendError, lastSentMessage } = useSendMessage()
   const [messageText, setMessageText] = useState('')
@@ -94,10 +122,12 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
     )
   }
 
+
+
   return (
     <div className="h-full flex flex-col">
       <div className="p-2 bg-muted/30 flex justify-between items-center border-b">
-        <h3 className="font-medium px-2">Chat {chatRoomId}</h3>
+        <div className="font-medium px-2">{chatTitle}</div>
         <Button 
           variant="ghost" 
           size="sm" 
@@ -107,6 +137,7 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
           <RefreshCcw className="h-4 w-4 mr-1" />
           Refresh
         </Button>
+        
       </div>
       
       <ScrollArea ref={scrollRef} className="flex-1 p-4">

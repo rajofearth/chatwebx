@@ -7,7 +7,7 @@ import { ChatSidebar } from '@/components/chat-sidebar'
 import { ChatInterface } from '@/components/chat-interface'
 import { CreateChatModal } from '@/components/create-chat-modal'
 import { NavMenu } from '@/components/nav-menu'
-import { ChatRoom } from '@/hooks/use-chat-rooms'
+import { ChatRoom, Profile } from '@/hooks/use-chat-rooms'
 
 export default function ChatPage() {
   const router = useRouter()
@@ -155,7 +155,7 @@ export default function ChatPage() {
                   .single()
                   
                 if (room && participants) {
-                  const profilesFormatted = participants.map(p => p.profiles);
+                  const profilesFormatted = participants.map(p => p.profiles)[0];
                   setSelectedChat({
                     id: room.id,
                     name: room.name,
