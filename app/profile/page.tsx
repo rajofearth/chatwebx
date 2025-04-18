@@ -53,22 +53,26 @@ export default function ProfilePage() {
     if (avatarFile) {
       const fileExt = avatarFile.name.split('.').pop()
       const filePath = `${user_id}/${Date.now()}.${fileExt}`
-      // Upload avatar file and log response
+      // Upload avatar file
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('avatars')
+        .from('avatar')
         .upload(filePath, avatarFile, { upsert: true, contentType: avatarFile.type })
       console.log('Avatar uploadData:', uploadData)
       console.error('Avatar uploadError:', uploadError)
       if (uploadError) {
-        console.error('Avatar upload failed:', uploadError)
-        setMessage('Avatar upload failed — check bucket name/spaces')
+        setMessage(`Avatar upload failed: ${JSON.stringify(uploadError)}`)
         setUpdating(false)
         return
       }
       // Get public URL for uploaded avatar
       const publicUrlData = supabase.storage
-        .from('avatars')
+        .from('avatar')
         .getPublicUrl(filePath)
+      if (!publicUrlData.data.publicUrl) {
+        setMessage('Could not retrieve avatar URL')
+        setUpdating(false)
+        return
+      }
       profile_picture_url = publicUrlData.data.publicUrl
     }
     const { error } = await supabase
