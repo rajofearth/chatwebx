@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 import { Profile } from '@/hooks/use-chat-rooms'
 import { Skeleton } from '@/components/ui/skeleton'
 import dynamic from 'next/dynamic'
+import { Theme } from 'emoji-picker-react'
 
 interface ChatInterfaceProps {
   chatRoomId: number | null
@@ -128,7 +129,7 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="p-2 bg-muted/30 flex items-center border-b">
-        <div className="mr-2">
+        <div className="mr-2 flex-shrink-0">
           {chatAvatarUrl ? (
             <Image
               src={chatAvatarUrl}
@@ -143,17 +144,17 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
             <User2 className="w-6 h-6 text-primary" />
           )}
         </div>
-        <div className="font-medium px-2">{chatTitle}</div>
+        <div className="font-medium px-2 truncate text-sm sm:text-base">{chatTitle}</div>
       </div>
       
       {/* Messages container with auto-scroll */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="relative flex-1 p-4 overflow-y-auto"
+        className="relative flex-1 p-2 sm:p-4 overflow-y-auto"
       >
         {messagesError && (
-          <div className="p-3 mb-4 bg-red-50 border border-red-200 text-red-600 rounded text-sm">
+          <div className="p-2 sm:p-3 mb-4 bg-red-50 border border-red-200 text-red-600 rounded text-xs sm:text-sm">
             Error loading messages: {messagesError}
             <Button onClick={refetch} size="sm" variant="outline" className="ml-2">
               Retry
@@ -162,9 +163,9 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
         )}
 
         {messagesLoading ? (
-          <div className="space-y-4">
+          <div className="space-y-2 sm:space-y-4">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex flex-col gap-2">
+              <div key={i} className="flex flex-col gap-1 sm:gap-2">
                 <div className="flex items-center gap-2">
                   <Skeleton className="h-8 w-8 rounded-full" />
                   <Skeleton className="h-4 w-24" />
@@ -174,7 +175,7 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
             ))}
           </div>
         ) : messages.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-2 sm:space-y-4">
             {messages.map((message, index) => {
               const isCurrentUser = message.sender_id === userId;
               const prevMessage = index > 0 ? messages[index - 1] : null;
@@ -193,21 +194,21 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
                 >
                   <div
                     className={cn(
-                      "max-w-[75%] rounded-lg p-3",
+                      "max-w-[85%] sm:max-w-[75%] rounded-lg p-2 sm:p-3",
                       isCurrentUser
                         ? "bg-primary text-primary-foreground rounded-br-none"
                         : "bg-muted text-foreground rounded-bl-none"
                     )}
                   >
                     {showSender && !isCurrentUser && (
-                      <div className="mb-1 text-xs font-medium">
+                      <div className="mb-1 text-xs font-medium truncate max-w-[250px]">
                         {message.sender_profile?.name ||
                           message.sender_profile?.email ||
                           "Unknown user"}
                       </div>
                     )}
-                    <div className="text-sm">{message.content}</div>
-                    <div className="mt-1 text-xs opacity-70 text-right">
+                    <div className="text-xs sm:text-sm">{message.content}</div>
+                    <div className="mt-1 text-[10px] sm:text-xs opacity-70 text-right">
                       {new Date(message.created_at).toLocaleTimeString("en-US", {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -228,7 +229,7 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
         {showScrollButton && (
           <button
             onClick={scrollToBottom}
-            className="absolute bottom-4 right-4 bg-primary text-primary-foreground p-2 rounded-full shadow-lg"
+            className="absolute bottom-4 right-2 sm:right-4 bg-primary text-primary-foreground p-2 rounded-full shadow-lg"
           >
             <ChevronDown className="w-4 h-4" />
           </button>
@@ -237,21 +238,23 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
 
       <form 
         onSubmit={handleSendMessage}
-        className="p-4 border-t flex flex-col gap-2 sticky bottom-0 bg-background"
+        className="p-2 sm:p-4 border-t flex flex-col gap-2 sticky bottom-0 bg-background"
       >
-        <div className="flex gap-2 items-end relative">
+        <div className="flex gap-1 sm:gap-2 items-end relative">
           {/* Emoji picker toggle button */}
           <button
             type="button"
             onClick={() => setShowEmojiPicker((prev) => !prev)}
-            className="p-2 rounded hover:bg-muted/20"
+            className="p-1 sm:p-2 rounded hover:bg-muted/20"
           >
             <Smile className="w-5 h-5 text-gray-500" />
           </button>
           {/* Emoji picker popup */}
           {showEmojiPicker && (
-            <div className="absolute bottom-12 left-0 z-20">
+            <div className="absolute bottom-12 left-0 z-20 transform -translate-x-1/2 sm:translate-x-0">
               <Picker
+                theme={Theme.DARK}
+                width={window.innerWidth < 640 ? 280 : 350}
                 onEmojiClick={(emojiData) => {
                   setMessageText((prev) => prev + emojiData.emoji)
                   setShowEmojiPicker(false)

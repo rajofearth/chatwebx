@@ -2,11 +2,27 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { NavMenu } from '@/components/nav-menu'
+import { Camera, User, Mail, Loader2, Pencil } from 'lucide-react'
+import { 
+  Card, 
+  CardHeader, 
+  CardContent, 
+  CardFooter,
+  CardTitle,
+  CardDescription
+} from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 export default function ProfilePage() {
   const supabase = createClient()
   const [profile, setProfile] = useState({ name: '', email: '', profile_picture: '' })
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
   const [message, setMessage] = useState('')
@@ -37,6 +53,21 @@ export default function ProfilePage() {
     fetchProfile()
   }, [])
 
+  // Handle file selection and create preview
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      const file = e.target.files[0]
+      setAvatarFile(file)
+      
+      // Create preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setUpdating(true)
@@ -57,13 +88,16 @@ export default function ProfilePage() {
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('avatar')
         .upload(filePath, avatarFile, { upsert: true, contentType: avatarFile.type })
+      
       console.log('Avatar uploadData:', uploadData)
-      console.error('Avatar uploadError:', uploadError)
+      // Only log error if it exists
       if (uploadError) {
+        console.error('Avatar uploadError:', uploadError)
         setMessage(`Avatar upload failed: ${JSON.stringify(uploadError)}`)
         setUpdating(false)
         return
       }
+      
       // Get public URL for uploaded avatar
       const publicUrlData = supabase.storage
         .from('avatar')
@@ -83,51 +117,172 @@ export default function ProfilePage() {
       setMessage('Update failed')
     } else {
       setMessage('Profile updated!')
+      // Clear preview after successful upload
+      setAvatarPreview(null)
     }
     setTimeout(() => setMessage(''), 3000)
     setUpdating(false)
   }
 
-  if (loading) return <div>Loading profile...</div>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <NavMenu />
+        <div className="flex items-center justify-center h-[calc(100vh-64px)]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2 text-lg">Loading profile...</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="p-4 max-w-md mx-auto">
-      <h1 className="text-2xl font-semibold mb-4">Your Profile</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium">Avatar</label>
-          {profile.profile_picture && <img src={profile.profile_picture} alt="avatar" className="w-24 h-24 rounded-full mb-2" />}
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => e.target.files?.[0] && setAvatarFile(e.target.files[0])}
-          />
+    <div className="min-h-screen bg-background">
+      <NavMenu />
+      
+      <div className="container mx-auto py-8 px-4">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-3xl font-bold mb-6">My Profile</h1>
+          
+          <Tabs defaultValue="profile" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="profile">Profile Information</TabsTrigger>
+              <TabsTrigger value="preferences">Preferences</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="profile">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Profile Avatar Card */}
+                <Card className="md:col-span-1">
+                  <CardHeader>
+                    <CardTitle>Profile Photo</CardTitle>
+                    <CardDescription>Upload a profile picture</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-col items-center justify-center">
+                    <div className="relative mb-4 group">
+                      {avatarPreview ? (
+                        // Show preview image if available
+                        <img 
+                          src={avatarPreview} 
+                          alt="Preview" 
+                          className="w-32 h-32 rounded-full object-cover border-4 border-background shadow-md"
+                        />
+                      ) : profile.profile_picture ? (
+                        <img 
+                          src={profile.profile_picture} 
+                          alt={profile.name || "Profile"} 
+                          className="w-32 h-32 rounded-full object-cover border-4 border-background shadow-md"
+                        />
+                      ) : (
+                        <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center">
+                          <User className="h-12 w-12 text-muted-foreground" />
+                        </div>
+                      )}
+                      
+                      {/* Overlay on hover with pencil icon */}
+                      <label 
+                        htmlFor="avatar-upload" 
+                        className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      >
+                        <Pencil className="h-6 w-6 text-white" />
+                      </label>
+                      <input
+                        id="avatar-upload"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleFileSelect}
+                      />
+                    </div>
+                    
+                    {avatarFile && (
+                      <p className="text-sm text-primary mt-2 text-center">
+                        {avatarPreview ? 'Click Save Changes to upload' : 'Processing...'}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+                
+                {/* Profile Info Card */}
+                <Card className="md:col-span-2">
+                  <CardHeader>
+                    <CardTitle>Personal Information</CardTitle>
+                    <CardDescription>Update your profile details</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form id="profile-form" onSubmit={handleSubmit} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Full Name</Label>
+                        <div className="flex">
+                          <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                          </span>
+                          <Input
+                            id="name"
+                            className="rounded-l-none"
+                            value={profile.name}
+                            onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                            placeholder="Enter your full name"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email Address</Label>
+                        <div className="flex">
+                          <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted">
+                            <Mail className="h-4 w-4 text-muted-foreground" />
+                          </span>
+                          <Input
+                            id="email"
+                            type="email"
+                            className="rounded-l-none"
+                            value={profile.email}
+                            onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                            placeholder="Enter your email address"
+                          />
+                        </div>
+                      </div>
+                    </form>
+                  </CardContent>
+                  <CardFooter className="flex justify-between">
+                    <div>
+                      {message && (
+                        <p className={message.includes('fail') ? "text-destructive text-sm" : "text-green-500 text-sm"}>
+                          {message}
+                        </p>
+                      )}
+                    </div>
+                    <Button 
+                      type="submit" 
+                      form="profile-form"
+                      disabled={updating}
+                    >
+                      {updating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {updating ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="preferences">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Account Preferences</CardTitle>
+                  <CardDescription>Manage your account settings</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    This section will include notification settings, privacy controls, and other account preferences
+                    when backend functionality is implemented.
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
-        <div>
-          <label className="block text-sm font-medium">Name</label>
-          <input
-            className="mt-1 block w-full border rounded p-2"
-            value={profile.name}
-            onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium">Email</label>
-          <input
-            className="mt-1 block w-full border rounded p-2"
-            value={profile.email}
-            onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={updating}
-          className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark"
-        >
-          {updating ? 'Updating...' : 'Save'}
-        </button>
-      </form>
-      {message && <div className="mt-4 text-sm text-green-600">{message}</div>}
+      </div>
     </div>
   )
 } 
