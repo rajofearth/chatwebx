@@ -157,19 +157,22 @@ export function ChatSidebar({
                 )}
                 onClick={() => onSelectChat(chat)}
               >
-                <div className="mr-2">
+                <div className="mr-2 relative w-10 h-10 flex-shrink-0 rounded-full overflow-hidden">
                   {getChatAvatar(chat) ? (
                     <Image
                       src={getChatAvatar(chat)!}
                       alt="avatar"
-                      width={32}
-                      height={32}
-                      className="rounded-full"
+                      fill
+                      className="object-cover"
                     />
                   ) : chat.is_global ? (
-                    <Globe className="w-5 h-5 text-primary" />
+                    <div className="flex items-center justify-center w-full h-full bg-gray-100 dark:bg-gray-700">
+                      <Globe className="w-5 h-5 text-primary" />
+                    </div>
                   ) : (
-                    <User2 className="w-5 h-5 text-primary" />
+                    <div className="flex items-center justify-center w-full h-full bg-gray-100 dark:bg-gray-700">
+                      <User2 className="w-5 h-5 text-primary" />
+                    </div>
                   )}
                 </div>
                 <div className="flex flex-col items-start flex-1 min-w-0">

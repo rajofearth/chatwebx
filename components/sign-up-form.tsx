@@ -20,6 +20,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [repeatPassword, setRepeatPassword] = useState('')
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -37,14 +38,45 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
+      // Sign up user
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/home`,
-        },
+        options: { emailRedirectTo: `${window.location.origin}/home` },
       })
-      if (error) throw error
+      if (signUpError) throw signUpError
+      const user = signUpData.user
+      if (!user) throw new Error('No user returned')
+      // Sign in user to enable authenticated upload and session
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      if (signInError) throw signInError
+      // Now upload avatar if provided
+      let profile_picture_url: string | undefined
+      if (avatarFile) {
+        const fileExt = avatarFile.name.split('.').pop()
+        const filePath = `${user.id}/${Date.now()}.${fileExt}`
+        const { error: uploadError } = await supabase.storage.from('avatar').upload(filePath, avatarFile, { upsert: true })
+        if (uploadError) {
+          setError(`Avatar upload failed: ${uploadError.message}`)
+          setIsLoading(false)
+          return
+        }
+        const { data: urlData } = supabase.storage.from('avatar').getPublicUrl(filePath)
+        profile_picture_url = urlData.publicUrl
+      }
+      // Insert into profiles table
+      const displayName = email.split('@')[0]
+      const { error: profileError } = await supabase.from('profiles').insert({
+        user_id: user.id,
+        email,
+        name: displayName,
+        profile_picture: profile_picture_url || null,
+      })
+      if (profileError) {
+        setError(`Profile creation failed: ${profileError.message}`)
+        setIsLoading(false)
+        return
+      }
       router.push('/auth/login')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred')
@@ -96,6 +128,15 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                   required
                   value={repeatPassword}
                   onChange={(e) => setRepeatPassword(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="avatar">Avatar (optional)</Label>
+                <input
+                  id="avatar"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
