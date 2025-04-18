@@ -7,6 +7,7 @@ import { ChatSidebar } from '@/components/chat-sidebar'
 import { ChatInterface } from '@/components/chat-interface'
 import { CreateChatModal } from '@/components/create-chat-modal'
 import { NavMenu } from '@/components/nav-menu'
+import { Menu, X } from 'lucide-react'
 import { ChatRoom, Profile } from '@/hooks/use-chat-rooms'
 
 export default function ChatPage() {
@@ -15,9 +16,30 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true)
   const [selectedChat, setSelectedChat] = useState<ChatRoom | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  // Mobile responsiveness states
+  const [isMobileView, setIsMobileView] = useState(false)
+  const [showSidebar, setShowSidebar] = useState(true)
   
   console.log('Current selectedChat:', selectedChat)
   
+  // Check for mobile view on mount and window resize
+  useEffect(() => {
+    const checkMobileView = () => {
+      const mobile = window.innerWidth < 768; // 768px is standard md breakpoint
+      setIsMobileView(mobile);
+      // On desktop, sidebar is always visible
+      // On mobile, sidebar is hidden if a chat is selected
+      setShowSidebar(!mobile || !selectedChat);
+    };
+    
+    checkMobileView();
+    window.addEventListener('resize', checkMobileView);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobileView);
+    };
+  }, [selectedChat]);
+
   // Check if user is authenticated and create profile if needed
   useEffect(() => {
     const checkUserAndProfile = async () => {
@@ -76,16 +98,31 @@ export default function ChatPage() {
 
   return (
     <div className="h-screen flex flex-col">
-      <NavMenu />
+      <div className="relative">
+        <NavMenu />
+        {isMobileView && (
+          <button 
+            className="absolute left-4 top-1/2 -translate-y-1/2 md:hidden"
+            onClick={() => setShowSidebar(prev => !prev)}
+          >
+            {showSidebar ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        )}
+      </div>
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
-        <div className="w-80 h-full">
+        <div className={`${isMobileView ? 'w-full absolute z-10' : 'w-80'} h-full transition-all duration-300 ${showSidebar ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
           <ChatSidebar
+            key={`sidebar-${user.id}`}
             userId={user.id}
             selectedChatId={selectedChat?.id || null}
             onSelectChat={(chat) => {
               console.log('Selected chat from sidebar:', chat)
               setSelectedChat(chat)
+              // Hide sidebar on mobile after selecting a chat
+              if (isMobileView) {
+                setShowSidebar(false);
+              }
             }}
             onCreateNewChat={() => setShowCreateModal(true)}
           />

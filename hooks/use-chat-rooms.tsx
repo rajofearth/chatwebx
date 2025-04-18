@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 
 export interface ChatRoom {
   id: number
@@ -24,17 +24,19 @@ export interface Profile {
 }
 
 export function useChatRooms(userId: string) {
-  const supabase = createClient()
+  // Memoize Supabase client so it's stable across renders and not a dependency of useEffect
+  const supabase = useMemo(() => createClient(), [])
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let isMounted = true;
     
-    async function fetchChatRooms() {
+    async function fetchChatRooms(silent = false) {
+      console.log(`🔄 fetchChatRooms called (silent=${silent})`)
       if (!userId) return;
       
-      setLoading(true)
+      if (!silent) setLoading(true)
       
       try {
         // Fetch global chats and p2p chats separately to avoid OR syntax
@@ -119,6 +121,7 @@ export function useChatRooms(userId: string) {
         
         // Fetch latest message for each chat
         const enhancedChats = await Promise.all(roomsWithParticipants.map(async (chat) => {
+          console.log(`🔍 Fetching latest message for chat ${chat.id}`)
           try {
             const { data: latestMessage, error: messageError } = await supabase
               .from('messages')
@@ -127,6 +130,10 @@ export function useChatRooms(userId: string) {
               .order('created_at', { ascending: false })
               .limit(1)
               .single()
+            
+            if (latestMessage) {
+              console.log(`📩 Latest message for chat ${chat.id}:`, latestMessage.content.substring(0, 20) + '...')
+            }
             
             if (messageError && messageError.code !== 'PGRST116') {
               console.error(`Error fetching latest message for chat ${chat.id}:`, messageError)
@@ -150,12 +157,17 @@ export function useChatRooms(userId: string) {
         })
         
         if (isMounted) {
+          console.log('📊 Setting chatRooms with updated messages', 
+            enhancedChats.map(c => ({ 
+              id: c.id, 
+              preview: c.latest_message?.content.substring(0, 15) + '...' || 'No message' 
+            })))
           setChatRooms(enhancedChats)
-          setLoading(false)
+          if (!silent) setLoading(false)
         }
       } catch (error) {
         console.error('Error fetching chat rooms:', error)
-        if (isMounted) {
+        if (isMounted && !silent) {
           setLoading(false)
         }
       }
@@ -170,38 +182,50 @@ export function useChatRooms(userId: string) {
         event: 'INSERT',
         schema: 'public',
         table: 'messages'
-      }, (payload) => {
-        const newMessage = payload.new;
+      }, async (payload) => {
+        // Log new message detected by subscription
+        console.log('⚡️ New message detected in subscription:', payload.new)
         
-        setChatRooms(prevChats => {
-          // Find the chat the message belongs to
-          const updatedChats = prevChats.map(chat => {
-            if (chat.id === newMessage.chat_room_id) {
-              return {
-                ...chat,
-                latest_message: {
-                  content: newMessage.content,
-                  created_at: newMessage.created_at
-                }
-              };
-            }
-            return chat;
-          });
+        try {
+          const newMessage = payload.new;
           
-          // Re-sort chats by latest message timestamp
-          return [...updatedChats].sort((a, b) => {
-            const aTimestamp = a.latest_message?.created_at || a.created_at;
-            const bTimestamp = b.latest_message?.created_at || b.created_at;
-            return new Date(bTimestamp).getTime() - new Date(aTimestamp).getTime();
+          // Update the chat rooms state directly without a full refetch
+          setChatRooms(prevRooms => {
+            // Create a new array with all rooms
+            const updatedRooms = prevRooms.map(room => {
+              // If this is the room the message belongs to, update its latest_message
+              if (room.id === newMessage.chat_room_id) {
+                console.log(`🔄 Updating latest message for room ${room.id} to: ${newMessage.content.substring(0, 20)}...`);
+                return {
+                  ...room,
+                  latest_message: {
+                    content: newMessage.content,
+                    created_at: newMessage.created_at
+                  }
+                };
+              }
+              return room;
+            });
+            
+            // Sort by latest message date
+            return [...updatedRooms].sort((a, b) => {
+              const aTimestamp = a.latest_message?.created_at || a.created_at;
+              const bTimestamp = b.latest_message?.created_at || b.created_at;
+              return new Date(bTimestamp).getTime() - new Date(aTimestamp).getTime();
+            });
           });
-        });
+        } catch (error) {
+          console.error("Error updating latest message in real-time:", error);
+          // Fallback to full refresh if direct update fails
+          fetchChatRooms(true);
+        }
       })
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'chat_rooms'
       }, () => {
-        fetchChatRooms();
+        fetchChatRooms(true);
       })
       .on('postgres_changes', {
         event: 'INSERT',
@@ -209,16 +233,17 @@ export function useChatRooms(userId: string) {
         table: 'p2p_chat_users'
       }, (payload) => {
         if (payload.new.user_id === userId) {
-          fetchChatRooms();
+          fetchChatRooms(true);
         }
       })
       .subscribe();
     
     return () => {
+      console.log('♻️ Cleaning up chat_updates subscription channel')
       isMounted = false;
       supabase.removeChannel(channel);
     };
-  }, [userId, supabase])
+  }, [userId])
 
   return { chatRooms, loading }
 } 

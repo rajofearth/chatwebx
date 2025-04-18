@@ -68,6 +68,21 @@ export function useSendMessage() {
       
       const newMessage = insertData && insertData[0]
       console.log('Message sent successfully:', newMessage)
+      
+      // Dispatch custom event to force UI updates across components
+      try {
+        const messageEvent = new CustomEvent('new-chat-message', { 
+          detail: { 
+            chatRoomId,
+            message: newMessage 
+          } 
+        });
+        window.dispatchEvent(messageEvent);
+        console.log('🔔 Dispatched new-chat-message event from useSendMessage');
+      } catch (eventError) {
+        console.error('Failed to dispatch message event:', eventError);
+      }
+      
       setLastSentMessage(newMessage)
       return newMessage
     } catch (err) {

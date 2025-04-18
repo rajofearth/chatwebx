@@ -122,6 +122,17 @@ export function useChatMessages(chatRoomId: number | null) {
           } as Message
           
           setMessages(prev => [...prev, newMessage])
+
+          // Dispatch a custom event to notify the app that a new message arrived
+          // This can help force re-renders in other components that need to react to new messages
+          const newMessageEvent = new CustomEvent('new-chat-message', { 
+            detail: { 
+              chatRoomId: newMessage.chat_room_id,
+              message: newMessage 
+            } 
+          });
+          window.dispatchEvent(newMessageEvent);
+          console.log('🔔 Dispatched new-chat-message event');
         } catch (error) {
           console.error('Error processing new message:', error)
         }
