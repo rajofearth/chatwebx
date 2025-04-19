@@ -29,6 +29,26 @@ const fadeInAnimation = `
     from { opacity: 0; }
     to { opacity: 1; }
   }
+
+  /* Mobile-friendly image controls */
+  @media (max-width: 768px) {
+    .mobile-visible {
+      opacity: 0.8 !important;
+    }
+    
+    .image-container::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+      border-bottom-left-radius: 0.25rem;
+      border-bottom-right-radius: 0.25rem;
+      pointer-events: none;
+    }
+  }
 `;
 
 export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInterfaceProps) {
@@ -312,21 +332,21 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
                     <div className="text-sm">
                       {message.content.startsWith('Imagined : ')
                         ? (
-                            <div className="relative group">
+                            <div className="relative group image-container">
                               <img 
                                 src={message.content.replace(/^Imagined\s*:\s*/, '')} 
                                 alt="Imagined image" 
                                 className="rounded max-w-xs sm:max-w-sm cursor-pointer transition-transform hover:scale-[0.98]" 
                                 onClick={() => setEnlargedImage(message.content.replace(/^Imagined\s*:\s*/, ''))}
                               />
-                              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 md:transition-opacity flex items-center justify-center">
                                 <div className="absolute inset-0 bg-black/30 rounded"></div>
                                 <button 
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setEnlargedImage(message.content.replace(/^Imagined\s*:\s*/, ''));
                                   }} 
-                                  className="relative z-10 p-2 rounded-full bg-black/50 text-white"
+                                  className="relative z-10 p-2 rounded-full bg-black/50 text-white transform transition-transform active:scale-95"
                                 >
                                   <Maximize2 className="w-5 h-5" />
                                 </button>
@@ -336,10 +356,19 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
                                 download
                                 target="_blank"
                                 onClick={(e) => e.stopPropagation()}
-                                className="absolute bottom-2 right-2 p-1.5 rounded-full bg-primary text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="absolute bottom-2 right-2 p-1.5 rounded-full bg-primary text-primary-foreground opacity-0 group-hover:opacity-100 mobile-visible transition-opacity shadow-lg"
                               >
                                 <Download className="w-4 h-4" />
                               </a>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEnlargedImage(message.content.replace(/^Imagined\s*:\s*/, ''));
+                                }}
+                                className="absolute bottom-2 left-2 p-1.5 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 mobile-visible transition-opacity shadow-lg md:hidden"
+                              >
+                                <Maximize2 className="w-4 h-4" />
+                              </button>
                             </div>
                           )
                         : message.content.replace(/\b(imagine)\b/gi, '|||$1|||')
