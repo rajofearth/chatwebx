@@ -82,15 +82,13 @@ export default function ProfilePage() {
     const user_id = user.id
     let profile_picture_url = profile.profile_picture
     if (avatarFile) {
+      // Upload new avatar
       const fileExt = avatarFile.name.split('.').pop()
       const filePath = `${user_id}/${Date.now()}.${fileExt}`
-      // Upload avatar file
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('avatar')
         .upload(filePath, avatarFile, { upsert: true, contentType: avatarFile.type })
       
-      console.log('Avatar uploadData:', uploadData)
-      // Only log error if it exists
       if (uploadError) {
         console.error('Avatar uploadError:', uploadError)
         setMessage(`Avatar upload failed: ${JSON.stringify(uploadError)}`)
@@ -98,16 +96,21 @@ export default function ProfilePage() {
         return
       }
       
-      // Get public URL for uploaded avatar
-      const publicUrlData = supabase.storage
-        .from('avatar')
-        .getPublicUrl(filePath)
+      // Get new public URL
+      const publicUrlData = supabase.storage.from('avatar').getPublicUrl(filePath)
       if (!publicUrlData.data.publicUrl) {
         setMessage('Could not retrieve avatar URL')
         setUpdating(false)
         return
       }
       profile_picture_url = publicUrlData.data.publicUrl
+
+      // Delete old avatar file if present
+      if (profile.profile_picture) {
+        const oldPath = profile.profile_picture.split('/avatar/')[1]
+        const { error: removeError } = await supabase.storage.from('avatar').remove([oldPath])
+        if (removeError) console.error('Error removing old avatar:', removeError)
+      }
     }
     const { error } = await supabase
       .from('profiles')
