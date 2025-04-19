@@ -6,7 +6,7 @@ import { useChatRooms, ChatRoom } from '@/hooks/use-chat-rooms'
 import { useSendMessage } from '@/hooks/use-send-message'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Send, ChevronDown, Globe, User2, Smile, Loader2 } from 'lucide-react'
+import { Send, ChevronDown, Globe, User2, Smile, Loader2, Download, X, Maximize2, Image as ImageIcon } from 'lucide-react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import { Profile } from '@/hooks/use-chat-rooms'
@@ -59,6 +59,7 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
   const [isSuggesting, setIsSuggesting] = useState(false)
   const [isChatxTyping, setIsChatxTyping] = useState(false)
   const [isImagining, setIsImagining] = useState(false)
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null)
 
   console.log('ChatInterface mounted with:', { chatRoomId, userId, receiverId })
   console.log('Current messages:', messages, 'Error:', messagesError)
@@ -301,7 +302,30 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
                     )}
                     <div className="text-sm">
                       {message.content.startsWith('Imagined : ')
-                        ? <img src={message.content.replace(/^Imagined\s*:\s*/, '')} alt="Imagined image" className="rounded max-w-xs sm:max-w-sm" />
+                        ? (
+                            <div className="relative group">
+                              <img 
+                                src={message.content.replace(/^Imagined\s*:\s*/, '')} 
+                                alt="Imagined image" 
+                                className="rounded max-w-xs sm:max-w-sm cursor-pointer transition-transform hover:scale-[0.98]" 
+                                onClick={() => setEnlargedImage(message.content.replace(/^Imagined\s*:\s*/, ''))}
+                              />
+                              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <div className="absolute inset-0 bg-black/30 rounded"></div>
+                                <button className="relative z-10 p-2 rounded-full bg-black/50 text-white">
+                                  <Maximize2 className="w-5 h-5" />
+                                </button>
+                              </div>
+                              <a 
+                                href={message.content.replace(/^Imagined\s*:\s*/, '')}
+                                download
+                                target="_blank"
+                                className="absolute bottom-2 right-2 p-1.5 rounded-full bg-primary text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <Download className="w-4 h-4" />
+                              </a>
+                            </div>
+                          )
                         : message.content.split(/(@ChatxAI:?)/g).map((part, i) =>
                             /^@ChatxAI:?/.test(part)
                               ? <span key={i} className="bg-blue-100 text-blue-800 px-1 rounded">{part}</span>
@@ -344,6 +368,17 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
         {/* Suggestion pill for ChatxAI trigger */}
         {messageText.trim() === '@' && (
           <button type="button" onClick={() => setMessageText('@ChatxAI ')} className="mb-2 px-2 py-1 bg-muted/20 rounded-full text-sm">@ChatxAI</button>
+        )}
+        {/* Suggestion pill for imagine command */}
+        {messageText.trim().toLowerCase() === 'i' && (
+          <button 
+            type="button" 
+            onClick={() => setMessageText('imagine ')} 
+            className="mb-2 px-2 py-1 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-full text-sm flex items-center gap-1"
+          >
+            <ImageIcon className="w-3 h-3" />
+            imagine
+          </button>
         )}
         {/* ChatxAI Typing indicator */}
         {isChatxTyping && (
@@ -406,6 +441,33 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
           </Button>
         </div>
       </form>
+
+      {/* Image Modal/Lightbox */}
+      {enlargedImage && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="relative max-w-5xl max-h-[90vh] overflow-hidden rounded-lg">
+            <img 
+              src={enlargedImage} 
+              alt="Enlarged image" 
+              className="object-contain max-h-[90vh] rounded-lg shadow-xl"
+            />
+            <button 
+              onClick={() => setEnlargedImage(null)}
+              className="absolute top-2 right-2 p-1 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <a 
+              href={enlargedImage}
+              download
+              target="_blank"
+              className="absolute bottom-2 right-2 p-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <Download className="w-5 h-5" />
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
