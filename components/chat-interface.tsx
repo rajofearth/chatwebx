@@ -6,7 +6,7 @@ import { useChatRooms, ChatRoom } from '@/hooks/use-chat-rooms'
 import { useSendMessage } from '@/hooks/use-send-message'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Send, ChevronDown, Globe, User2, Smile } from 'lucide-react'
+import { Send, ChevronDown, Globe, User2, Smile, Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import { Profile } from '@/hooks/use-chat-rooms'
@@ -56,6 +56,8 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showScrollButton, setShowScrollButton] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [isSuggesting, setIsSuggesting] = useState(false)
+  const [isChatxTyping, setIsChatxTyping] = useState(false)
 
   console.log('ChatInterface mounted with:', { chatRoomId, userId, receiverId })
   console.log('Current messages:', messages, 'Error:', messagesError)
@@ -93,6 +95,62 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     console.log('Attempting to send message:', { messageText, chatRoomId, userId, receiverId })
+
+    // ChatxAI command: send AI query and reply into chat
+    if (messageText.trim().toLowerCase().startsWith('@chatxai ') && chatRoomId) {
+      setIsChatxTyping(true)
+      await sendMessage({
+        content: messageText,
+        chatRoomId,
+        senderId: userId,
+        receiverId,
+      })
+      const aiQuery = messageText.trim().substring('@ChatxAI '.length)
+      try {
+        const res = await fetch('/api/genai/suggest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: aiQuery }),
+        })
+        const data = await res.json()
+        if (data.suggestion) {
+          await sendMessage({
+            content: `@ChatxAI Replied: ${data.suggestion}`,
+            chatRoomId,
+            senderId: userId,
+            receiverId,
+          })
+        }
+      } catch (err) {
+        console.error('Error ChatxAI:', err)
+      } finally {
+        setIsChatxTyping(false)
+        setMessageText('')
+      }
+      return
+    }
+
+    if (messageText.trim() === '/' && chatRoomId && messages.length > 0) {
+      setIsSuggesting(true)
+      try {
+        const lastMessage = messages[messages.length - 1].content
+        const response = await fetch('/api/genai/suggest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: lastMessage }),
+        })
+        const data = await response.json()
+        if (data.suggestion) {
+          setMessageText(data.suggestion)
+        }
+      } catch (err) {
+        console.error('Error fetching suggestion:', err)
+      } finally {
+        setIsSuggesting(false)
+      }
+      return
+    }
+
     if (!messageText.trim() || !chatRoomId) return
 
     try {
@@ -207,8 +265,14 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
                           "Unknown user"}
                       </div>
                     )}
-                    <div className="text-xs sm:text-sm">{message.content}</div>
-                    <div className="mt-1 text-[10px] sm:text-xs opacity-70 text-right">
+                    <div className="text-sm">
+                      {message.content.split(/(@ChatxAI:?)/g).map((part, i) =>
+                        /^@ChatxAI:?/.test(part)
+                          ? <span key={i} className="bg-blue-100 text-blue-800 px-1 rounded">{part}</span>
+                          : part
+                      )}
+                    </div>
+                    <div className="mt-1 text-xs opacity-70 text-right">
                       {new Date(message.created_at).toLocaleTimeString("en-US", {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -240,7 +304,29 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
         onSubmit={handleSendMessage}
         className="p-2 sm:p-4 border-t flex flex-col gap-2 sticky bottom-0 bg-background"
       >
-        <div className="flex gap-1 sm:gap-2 items-end relative">
+        {/* Suggestion pill for ChatxAI trigger */}
+        {messageText.trim() === '@' && (
+          <button type="button" onClick={() => setMessageText('@ChatxAI ')} className="mb-2 px-2 py-1 bg-muted/20 rounded-full text-sm">@ChatxAI</button>
+        )}
+        {/* ChatxAI Typing indicator */}
+        {isChatxTyping && (
+          <div className="flex items-center text-sm text-muted-foreground mb-2">
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />Typing...
+          </div>
+        )}
+        {/* Slash suggestion indicator */}
+        {isSuggesting && (
+          <div className="flex items-center text-sm text-muted-foreground mb-2">
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />Suggesting...
+          </div>
+        )}
+        {/* Hint when user types '/' */}
+        {!isSuggesting && messageText.trim() === '/' && (
+          <div className="text-xs text-muted-foreground mb-2">
+            Press Enter to auto-suggest based on the last message
+          </div>
+        )}
+        <div className="flex gap-2 items-end relative">
           {/* Emoji picker toggle button */}
           <button
             type="button"
@@ -266,13 +352,13 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
             placeholder="Type a message..."
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
-            disabled={sending || !chatRoomId}
+            disabled={sending || !chatRoomId || isSuggesting || isChatxTyping}
             className="flex-1"
           />
           <Button 
             type="submit"
             size="icon"
-            disabled={sending || !messageText.trim() || !chatRoomId}
+            disabled={sending || !messageText.trim() || !chatRoomId || isSuggesting || isChatxTyping}
           >
             <Send className="h-4 w-4" />
           </Button>
