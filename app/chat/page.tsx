@@ -55,14 +55,14 @@ export default function ChatPage() {
 
       setUser(data.user)
       
-      // Check if user has a profile and create one if not
-      const { data: profile } = await supabase
+      // Check if user has a profile (limit to 1) and create one if not
+      const { data: existingProfiles, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('user_id')
         .eq('user_id', data.user.id)
-        .maybeSingle()
+        .limit(1)
       
-      if (!profile) {
+      if (!existingProfiles || existingProfiles.length === 0) {
         const { error: insertError } = await supabase
           .from('profiles')
           .insert({
@@ -70,7 +70,6 @@ export default function ChatPage() {
             email: data.user.email,
             name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User'
           })
-        
         if (insertError) console.error('Error creating profile:', insertError)
       }
       
