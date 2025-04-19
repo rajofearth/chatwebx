@@ -23,6 +23,14 @@ interface ChatInterfaceProps {
 // Dynamic import of emoji picker to avoid SSR issues
 const Picker = dynamic(() => import('emoji-picker-react'), { ssr: false })
 
+// CSS for modal animation
+const fadeInAnimation = `
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+`;
+
 export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInterfaceProps) {
   const { chatRooms: allChatRooms, loading: allChatRoomsLoading } = useChatRooms(userId)
   const chatRoom = useMemo(() => allChatRooms.find(c => c.id === chatRoomId), [allChatRooms, chatRoomId]);
@@ -221,6 +229,7 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
+      <style jsx global>{fadeInAnimation}</style>
       <div className="p-2 bg-muted/30 flex items-center border-b">
         <div className="mr-2 flex-shrink-0">
           {chatAvatarUrl ? (
@@ -312,7 +321,13 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
                               />
                               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                 <div className="absolute inset-0 bg-black/30 rounded"></div>
-                                <button className="relative z-10 p-2 rounded-full bg-black/50 text-white">
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEnlargedImage(message.content.replace(/^Imagined\s*:\s*/, ''));
+                                  }} 
+                                  className="relative z-10 p-2 rounded-full bg-black/50 text-white"
+                                >
                                   <Maximize2 className="w-5 h-5" />
                                 </button>
                               </div>
@@ -320,17 +335,28 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
                                 href={message.content.replace(/^Imagined\s*:\s*/, '')}
                                 download
                                 target="_blank"
+                                onClick={(e) => e.stopPropagation()}
                                 className="absolute bottom-2 right-2 p-1.5 rounded-full bg-primary text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                               >
                                 <Download className="w-4 h-4" />
                               </a>
                             </div>
                           )
-                        : message.content.split(/(@ChatxAI:?)/g).map((part, i) =>
-                            /^@ChatxAI:?/.test(part)
-                              ? <span key={i} className="bg-blue-100 text-blue-800 px-1 rounded">{part}</span>
-                              : part
-                        )
+                        : message.content.replace(/\b(imagine)\b/gi, '|||$1|||')
+                            .split(/(@ChatxAI\s+Replied:|@ChatxAI\s*:|@ChatxAI|(?:\|\|\|.*?\|\|\|))/g)
+                            .filter(Boolean)
+                            .map((part, i) => {
+                              if (/^@ChatxAI\s+Replied:|^@ChatxAI\s*:|^@ChatxAI/i.test(part)) {
+                                return <span key={i} className="bg-blue-100 text-blue-800 px-1 rounded">{part}</span>;
+                              } else if (/^\|\|\|(imagine)\|\|\|$/i.test(part)) {
+                                const word = part.replace(/\|\|\|/g, '');
+                                return <span key={i} className="bg-gradient-to-r from-violet-500 to-purple-600 text-white px-1.5 py-0.5 rounded-md font-medium inline-flex items-center gap-1">
+                                  <ImageIcon className="w-3 h-3" />{word}
+                                </span>;
+                              } else {
+                                return part;
+                              }
+                            })
                       }
                     </div>
                     <div className="mt-1 text-xs opacity-70 text-right">
@@ -444,8 +470,15 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
 
       {/* Image Modal/Lightbox */}
       {enlargedImage && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="relative max-w-5xl max-h-[90vh] overflow-hidden rounded-lg">
+        <div 
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" 
+          style={{ animation: 'fadeIn 0.2s ease-out' }}
+          onClick={() => setEnlargedImage(null)}
+        >
+          <div 
+            className="relative max-w-5xl max-h-[90vh] overflow-hidden rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
             <img 
               src={enlargedImage} 
               alt="Enlarged image" 
