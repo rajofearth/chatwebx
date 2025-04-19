@@ -58,6 +58,7 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [isSuggesting, setIsSuggesting] = useState(false)
   const [isChatxTyping, setIsChatxTyping] = useState(false)
+  const [isImagining, setIsImagining] = useState(false)
 
   console.log('ChatInterface mounted with:', { chatRoomId, userId, receiverId })
   console.log('Current messages:', messages, 'Error:', messagesError)
@@ -147,6 +148,39 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
         console.error('Error fetching suggestion:', err)
       } finally {
         setIsSuggesting(false)
+      }
+      return
+    }
+
+    if (messageText.trim().toLowerCase().startsWith('imagine ') && chatRoomId) {
+      setIsImagining(true)
+      await sendMessage({
+        content: messageText,
+        chatRoomId,
+        senderId: userId,
+        receiverId,
+      })
+      const imgPrompt = messageText.trim().substring('imagine '.length)
+      try {
+        const res = await fetch('/api/genai/imagine', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: imgPrompt }),
+        })
+        const data = await res.json()
+        if (data.imageUrl) {
+          await sendMessage({
+            content: `Imagined : ${data.imageUrl}`,
+            chatRoomId,
+            senderId: userId,
+            receiverId,
+          })
+        }
+      } catch (err) {
+        console.error('Error imagining image:', err)
+      } finally {
+        setIsImagining(false)
+        setMessageText('')
       }
       return
     }
@@ -266,11 +300,14 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
                       </div>
                     )}
                     <div className="text-sm">
-                      {message.content.split(/(@ChatxAI:?)/g).map((part, i) =>
-                        /^@ChatxAI:?/.test(part)
-                          ? <span key={i} className="bg-blue-100 text-blue-800 px-1 rounded">{part}</span>
-                          : part
-                      )}
+                      {message.content.startsWith('Imagined : ')
+                        ? <img src={message.content.replace(/^Imagined\s*:\s*/, '')} alt="Imagined image" className="rounded max-w-xs sm:max-w-sm" />
+                        : message.content.split(/(@ChatxAI:?)/g).map((part, i) =>
+                            /^@ChatxAI:?/.test(part)
+                              ? <span key={i} className="bg-blue-100 text-blue-800 px-1 rounded">{part}</span>
+                              : part
+                        )
+                      }
                     </div>
                     <div className="mt-1 text-xs opacity-70 text-right">
                       {new Date(message.created_at).toLocaleTimeString("en-US", {
@@ -326,6 +363,11 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
             Press Enter to auto-suggest based on the last message
           </div>
         )}
+        {isImagining && (
+          <div className="flex items-center text-sm text-muted-foreground mb-2">
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />Imagining...
+          </div>
+        )}
         <div className="flex gap-2 items-end relative">
           {/* Emoji picker toggle button */}
           <button
@@ -352,13 +394,13 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
             placeholder="Type a message..."
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
-            disabled={sending || !chatRoomId || isSuggesting || isChatxTyping}
+            disabled={sending || !chatRoomId || isSuggesting || isChatxTyping || isImagining}
             className="flex-1"
           />
           <Button 
             type="submit"
             size="icon"
-            disabled={sending || !messageText.trim() || !chatRoomId || isSuggesting || isChatxTyping}
+            disabled={sending || !messageText.trim() || !chatRoomId || isSuggesting || isChatxTyping || isImagining}
           >
             <Send className="h-4 w-4" />
           </Button>
