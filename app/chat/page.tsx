@@ -56,14 +56,13 @@ export default function ChatPage() {
       setUser(data.user)
       
       // Check if user has a profile and create one if not
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', data.user.id)
-        .single()
+        .maybeSingle()
       
-      if (profileError && profileError.code === 'PGRST116') {
-        // No profile found, create one
+      if (!profile) {
         const { error: insertError } = await supabase
           .from('profiles')
           .insert({
@@ -72,11 +71,7 @@ export default function ChatPage() {
             name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User'
           })
         
-        if (insertError) {
-          console.error('Error creating profile:', insertError)
-        }
-      } else if (profileError) {
-        console.error('Error checking for profile:', profileError)
+        if (insertError) console.error('Error creating profile:', insertError)
       }
       
       setLoading(false)
