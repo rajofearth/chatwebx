@@ -111,7 +111,7 @@ export default function ProfilePage() {
     }
     const { error } = await supabase
       .from('profiles')
-      .update({ name: profile.name, email: profile.email, profile_picture: profile_picture_url })
+      .update({ name: profile.name, profile_picture: profile_picture_url })
       .eq('user_id', user_id)
     if (error) {
       setMessage('Update failed')
@@ -233,14 +233,9 @@ export default function ProfilePage() {
                           <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted">
                             <Mail className="h-4 w-4 text-muted-foreground" />
                           </span>
-                          <Input
-                            id="email"
-                            type="email"
-                            className="rounded-l-none"
-                            value={profile.email}
-                            onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                            placeholder="Enter your email address"
-                          />
+                          <span className="flex-1 px-3 py-2 rounded-r-md border border-input bg-muted-foreground/5 text-foreground">
+                            {profile.email}
+                          </span>
                         </div>
                       </div>
                     </form>
