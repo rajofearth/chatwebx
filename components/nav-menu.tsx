@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { HomeIcon, MessageSquare, User, LogOut, Menu } from 'lucide-react'
+import { MessageSquare, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LogoutButton } from '@/components/logout-button'
 import { useState, useEffect } from 'react'

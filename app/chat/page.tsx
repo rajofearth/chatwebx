@@ -94,14 +94,6 @@ export default function ChatPage() {
     <div className="flex flex-col flex-1 pb-16 md:pb-0">
       <div className="relative">
         <NavMenu />
-        {isMobileView && (
-          <button 
-            className="absolute left-4 top-1/2 -translate-y-1/2 md:hidden"
-            onClick={() => setShowSidebar(prev => !prev)}
-          >
-            {showSidebar ? <X size={24} /> : <Menu size={24} />}
-          </button>
-        )}
       </div>
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}

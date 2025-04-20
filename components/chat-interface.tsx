@@ -1,15 +1,14 @@
 'use client'
 
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Message, useChatMessages, } from '@/hooks/use-chat-messages'
-import { useChatRooms, ChatRoom } from '@/hooks/use-chat-rooms'
+import { useChatMessages, } from '@/hooks/use-chat-messages'
+import { useChatRooms } from '@/hooks/use-chat-rooms'
 import { useSendMessage } from '@/hooks/use-send-message'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Send, ChevronDown, Globe, User2, Smile, Loader2, Download, X, Maximize2, Image as ImageIcon } from 'lucide-react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
-import { Profile } from '@/hooks/use-chat-rooms'
 import { Skeleton } from '@/components/ui/skeleton'
 import dynamic from 'next/dynamic'
 import { Theme } from 'emoji-picker-react'
@@ -445,7 +444,7 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
 
       <form 
         onSubmit={handleSendMessage}
-        className="p-2 sm:p-4 border-t flex flex-col gap-2 sticky bottom-0 bg-background pb-20 sm:pb-4 z-10"
+        className="p-2 sm:p-4 border-t flex flex-col gap-2 sticky bottom-0 bg-background pb-10 sm:pb-4 z-10"
       >
         {/* Suggestion pill for ChatxAI trigger */}
         {messageText.trim() === '@' && (
