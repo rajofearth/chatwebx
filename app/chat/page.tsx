@@ -91,7 +91,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="flex flex-col flex-1 pb-16 md:pb-0">
       <div className="relative">
         <NavMenu />
         {isMobileView && (
