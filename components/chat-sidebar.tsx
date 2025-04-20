@@ -138,15 +138,15 @@ export function ChatSidebar({
   }
 
   return (
-    <div className="h-full flex flex-col border-r bg-background shadow-md md:shadow-none">
+    <div className="h-full flex flex-col border-r bg-background shadow-md md:shadow-none relative">
       <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold mb-2 hidden md:block">Chat</h2>
+        <h2 className="text-xl font-semibold mb-2 text-center md:text-left md:text-lg">Chats</h2>
         <div className="flex mt-2 space-x-2">
           <Button
             variant={filter === 'all' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setFilter('all')}
-            className="flex-1 px-2 md:px-3"
+            className="flex-1 px-2 md:px-3 py-4 md:py-2"
           >
             <MessageSquare className="w-4 h-4 md:mr-1" />
             <span className="hidden md:inline">All</span>
@@ -155,7 +155,7 @@ export function ChatSidebar({
             variant={filter === 'global' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setFilter('global')}
-            className="flex-1 px-2 md:px-3"
+            className="flex-1 px-2 md:px-3 py-4 md:py-2"
           >
             <Globe className="w-4 h-4 md:mr-1" />
             <span className="hidden md:inline">Global</span>
@@ -164,7 +164,7 @@ export function ChatSidebar({
             variant={filter === 'p2p' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setFilter('p2p')}
-            className="flex-1 px-2 md:px-3"
+            className="flex-1 px-2 md:px-3 py-4 md:py-2"
           >
             <User2 className="w-4 h-4 md:mr-1" />
             <span className="hidden md:inline">Private</span>
@@ -172,15 +172,15 @@ export function ChatSidebar({
         </div>
         <Button 
           onClick={onCreateNewChat}
-          className="w-full mt-2"
+          className="w-full mt-3 py-5 md:py-2"
           variant="outline"
         >
           <Plus className="w-4 h-4 mr-1" />
-          <span className="md:inline">New Chat</span>
+          <span>New Chat</span>
         </Button>
       </div>
       
-      <ScrollArea className="flex-1 overflow-y-auto">
+      <ScrollArea className="flex-1 overflow-y-auto p-1">
         {loading ? (
           <div className="p-4 space-y-3">
             {[...Array(5)].map((_, i) => (
@@ -194,7 +194,7 @@ export function ChatSidebar({
             ))}
           </div>
         ) : filteredChats.length === 0 ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">
+          <div className="p-8 text-center text-base md:text-sm text-muted-foreground">
             No chats found
           </div>
         ) : (

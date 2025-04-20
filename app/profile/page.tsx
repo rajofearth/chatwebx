@@ -143,14 +143,14 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-background">
       <NavMenu />
       
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-4 sm:py-8 px-3 sm:px-4">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold mb-6">My Profile</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">My Profile</h1>
           
           <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="profile">Profile Information</TabsTrigger>
-              <TabsTrigger value="preferences">Preferences</TabsTrigger>
+            <TabsList className="mb-4 w-full">
+              <TabsTrigger value="profile" className="flex-1 py-3 sm:py-2">Profile Information</TabsTrigger>
+              <TabsTrigger value="preferences" className="flex-1 py-3 sm:py-2">Preferences</TabsTrigger>
             </TabsList>
             
             <TabsContent value="profile">
@@ -168,16 +168,16 @@ export default function ProfilePage() {
                         <img 
                           src={avatarPreview} 
                           alt="Preview" 
-                          className="w-32 h-32 rounded-full object-cover border-4 border-background shadow-md"
+                          className="w-36 h-36 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-background shadow-md"
                         />
                       ) : profile.profile_picture ? (
                         <img 
                           src={profile.profile_picture} 
                           alt={profile.name || "Profile"} 
-                          className="w-32 h-32 rounded-full object-cover border-4 border-background shadow-md"
+                          className="w-36 h-36 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-background shadow-md"
                         />
                       ) : (
-                        <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center">
+                        <div className="w-36 h-36 sm:w-32 sm:h-32 rounded-full bg-muted flex items-center justify-center">
                           <User className="h-12 w-12 text-muted-foreground" />
                         </div>
                       )}
@@ -185,9 +185,9 @@ export default function ProfilePage() {
                       {/* Overlay on hover with pencil icon */}
                       <label 
                         htmlFor="avatar-upload" 
-                        className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full sm:opacity-0 sm:group-hover:opacity-100 opacity-30 transition-opacity cursor-pointer"
                       >
-                        <Pencil className="h-6 w-6 text-white" />
+                        <Pencil className="h-8 w-8 sm:h-6 sm:w-6 text-white" />
                       </label>
                       <input
                         id="avatar-upload"
@@ -223,6 +223,7 @@ export default function ProfilePage() {
                           <Input
                             id="name"
                             className="rounded-l-none"
+                            size="lg"
                             value={profile.name}
                             onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                             placeholder="Enter your full name"
@@ -255,6 +256,7 @@ export default function ProfilePage() {
                       type="submit" 
                       form="profile-form"
                       disabled={updating}
+                      className="py-6 px-5 sm:py-2 sm:px-4 text-base sm:text-sm"
                     >
                       {updating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       {updating ? 'Saving...' : 'Save Changes'}

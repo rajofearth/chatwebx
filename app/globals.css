@@ -120,3 +120,92 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Mobile app-specific enhancements */
+@media (max-width: 768px) {
+  /* Enhance tap targets */
+  button, 
+  a, 
+  input[type="submit"] {
+    @apply touch-action-manipulation;
+  }
+  
+  /* Active state feedback for buttons */
+  button:active,
+  a:active {
+    transform: scale(0.96);
+  }
+  
+  /* Adjust scrollbars for mobile */
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+  }
+  
+  /* Better focus outlines for mobile accessibility */
+  *:focus-visible {
+    @apply ring-2 ring-primary/70 ring-offset-1 ring-offset-background/10;
+    outline: none;
+  }
+}
+
+/* Mobile app animations and transitions */
+@keyframes slide-in-bottom {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Apply animations to app elements */
+@media (max-width: 768px) {
+  .message-bubble {
+    animation: slide-in-right 0.2s ease-out;
+  }
+  
+  .card {
+    animation: slide-in-bottom 0.3s ease-out;
+  }
+  
+  /* Page transition animations */
+  main {
+    animation: fade-in 0.3s ease-out;
+  }
+  
+  /* Mobile-specific UI improvements */
+  input, button, a {
+    transition: all 0.2s ease;
+  }
+}

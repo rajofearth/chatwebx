@@ -48,6 +48,27 @@ const fadeInAnimation = `
       border-bottom-right-radius: 0.25rem;
       pointer-events: none;
     }
+
+    /* Mobile-specific message styling */
+    .message-bubble {
+      max-width: 85% !important;
+      border-radius: 18px !important;
+      padding: 8px 12px !important;
+    }
+    
+    .message-bubble.sent {
+      border-bottom-right-radius: 4px !important;
+    }
+    
+    .message-bubble.received {
+      border-bottom-left-radius: 4px !important;
+    }
+    
+    /* Touch target sizes */
+    .touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
   }
 `;
 
@@ -316,10 +337,10 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
                 >
                   <div
                     className={cn(
-                      "max-w-[85%] sm:max-w-[75%] rounded-lg p-2 sm:p-3",
+                      "message-bubble max-w-[85%] sm:max-w-[75%] rounded-lg p-2 sm:p-3",
                       isCurrentUser
-                        ? "bg-primary text-primary-foreground rounded-br-none"
-                        : "bg-muted text-foreground rounded-bl-none"
+                        ? "bg-primary text-primary-foreground rounded-br-none sent"
+                        : "bg-muted text-foreground rounded-bl-none received"
                     )}
                   >
                     {showSender && !isCurrentUser && (
@@ -356,7 +377,7 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
                                 download
                                 target="_blank"
                                 onClick={(e) => e.stopPropagation()}
-                                className="absolute bottom-2 right-2 p-1.5 rounded-full bg-primary text-primary-foreground opacity-0 group-hover:opacity-100 mobile-visible transition-opacity shadow-lg"
+                                className="absolute bottom-2 right-2 p-2.5 rounded-full bg-primary text-primary-foreground opacity-0 group-hover:opacity-100 mobile-visible transition-opacity shadow-lg"
                               >
                                 <Download className="w-4 h-4" />
                               </a>
@@ -365,9 +386,9 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
                                   e.stopPropagation();
                                   setEnlargedImage(message.content.replace(/^Imagined\s*:\s*/, ''));
                                 }}
-                                className="absolute bottom-2 left-2 p-1.5 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 mobile-visible transition-opacity shadow-lg md:hidden"
+                                className="absolute bottom-2 left-2 p-2.5 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 mobile-visible transition-opacity shadow-lg md:hidden"
                               >
-                                <Maximize2 className="w-4 h-4" />
+                                <Maximize2 className="w-5 h-5" />
                               </button>
                             </div>
                           )
@@ -409,16 +430,16 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
         {showScrollButton && (
           <button
             onClick={scrollToBottom}
-            className="absolute bottom-4 right-2 sm:right-4 bg-primary text-primary-foreground p-2 rounded-full shadow-lg"
+            className="absolute bottom-4 right-2 sm:right-4 bg-primary text-primary-foreground p-3 rounded-full shadow-lg z-10"
           >
-            <ChevronDown className="w-4 h-4" />
+            <ChevronDown className="w-5 h-5" />
           </button>
         )}
       </div>
 
       <form 
         onSubmit={handleSendMessage}
-        className="p-2 sm:p-4 border-t flex flex-col gap-2 sticky bottom-0 bg-background"
+        className="p-2 sm:p-4 border-t flex flex-col gap-2 sticky bottom-0 bg-background pb-4 sm:pb-4"
       >
         {/* Suggestion pill for ChatxAI trigger */}
         {messageText.trim() === '@' && (
@@ -463,7 +484,7 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
           <button
             type="button"
             onClick={() => setShowEmojiPicker((prev) => !prev)}
-            className="p-1 sm:p-2 rounded hover:bg-muted/20"
+            className="p-2 rounded hover:bg-muted/20 touch-target flex items-center justify-center"
           >
             <Smile className="w-5 h-5 text-gray-500" />
           </button>
@@ -485,14 +506,16 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             disabled={sending || !chatRoomId || isSuggesting || isChatxTyping || isImagining}
-            className="flex-1"
+            className="flex-1 rounded-full"
+            size="lg"
           />
           <Button 
             type="submit"
             size="icon"
+            className="touch-target h-12 w-12 rounded-full"
             disabled={sending || !messageText.trim() || !chatRoomId || isSuggesting || isChatxTyping || isImagining}
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-5 w-5" />
           </Button>
         </div>
       </form>
