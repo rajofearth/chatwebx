@@ -127,7 +127,7 @@
   button, 
   a, 
   input[type="submit"] {
-    @apply touch-action-manipulation;
+    touch-action: manipulation;
   }
   
   /* Active state feedback for buttons */
