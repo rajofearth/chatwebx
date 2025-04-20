@@ -140,7 +140,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-y-auto pb-16">
       <NavMenu />
       
       <div className="container mx-auto py-4 sm:py-8 px-3 sm:px-4">
