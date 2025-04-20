@@ -272,6 +272,12 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
     <div className="h-full flex flex-col overflow-hidden">
       <style jsx global>{fadeInAnimation}</style>
       <div className="p-2 bg-muted/30 flex items-center border-b">
+        <button 
+          onClick={() => window.history.back()} 
+          className="mr-2 p-2 rounded-full hover:bg-muted/50 active:scale-95 transition-transform md:hidden"
+        >
+          <ChevronDown className="w-5 h-5 rotate-90" />
+        </button>
         <div className="mr-2 flex-shrink-0">
           {chatAvatarUrl ? (
             <Image
