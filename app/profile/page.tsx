@@ -223,7 +223,6 @@ export default function ProfilePage() {
                           <Input
                             id="name"
                             className="rounded-l-none"
-                            size="lg"
                             value={profile.name}
                             onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                             placeholder="Enter your full name"
