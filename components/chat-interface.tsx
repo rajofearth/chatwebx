@@ -445,7 +445,7 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
 
       <form 
         onSubmit={handleSendMessage}
-        className="p-2 sm:p-4 border-t flex flex-col gap-2 sticky bottom-0 bg-background pb-16 sm:pb-4 z-10"
+        className="p-2 sm:p-4 border-t flex flex-col gap-2 sticky bottom-0 bg-background pb-20 sm:pb-4 z-10"
       >
         {/* Suggestion pill for ChatxAI trigger */}
         {messageText.trim() === '@' && (
