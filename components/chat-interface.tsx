@@ -142,6 +142,19 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
     }
   }, [messages.length, messagesLoading])
 
+  // Add a new effect to scroll to bottom on component mount
+  useEffect(() => {
+    // Initial scroll to bottom on mount
+    scrollToBottom();
+    
+    // Set up a small delay to ensure all content is loaded
+    const timer = setTimeout(() => {
+      scrollToBottom();
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     console.log('Attempting to send message:', { messageText, chatRoomId, userId, receiverId })
@@ -268,11 +281,11 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden">
       <style jsx global>{fadeInAnimation}</style>
       <div className="p-2 bg-muted/30 flex items-center border-b">
         <button 
-          onClick={() => window.history.back()} 
+          onClick={() => window.location.reload()}
           className="mr-2 p-2 rounded-full hover:bg-muted/50 active:scale-95 transition-transform md:hidden"
         >
           <ChevronDown className="w-5 h-5 rotate-90" />
@@ -299,7 +312,7 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="relative flex-1 p-2 sm:p-4 overflow-y-auto"
+        className="relative flex-1 overflow-y-auto p-2 sm:p-4"
       >
         {messagesError && (
           <div className="p-2 sm:p-3 mb-4 bg-red-50 border border-red-200 text-red-600 rounded text-xs sm:text-sm">
@@ -358,11 +371,11 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
                     <div className="text-sm">
                       {message.content.startsWith('Imagined : ')
                         ? (
-                            <div className="relative group image-container">
+                            <div className="relative group image-container w-full overflow-hidden">
                               <img 
                                 src={message.content.replace(/^Imagined\s*:\s*/, '')} 
                                 alt="Imagined image" 
-                                className="rounded max-w-xs sm:max-w-sm cursor-pointer transition-transform hover:scale-[0.98]" 
+                                className="rounded w-full max-w-[65vw] sm:max-w-xs md:max-w-sm cursor-pointer transition-transform hover:scale-[0.98] object-contain" 
                                 onClick={() => setEnlargedImage(message.content.replace(/^Imagined\s*:\s*/, ''))}
                               />
                               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 md:transition-opacity flex items-center justify-center">
@@ -444,7 +457,7 @@ export function ChatInterface({ chatRoomId, userId, receiverId = null }: ChatInt
 
       <form 
         onSubmit={handleSendMessage}
-        className="p-2 sm:p-4 border-t flex flex-col gap-2 sticky bottom-0 bg-background pb-10 sm:pb-4 z-10"
+        className="p-2 sm:p-4 border-t flex flex-col gap-2 sticky bottom-0 bg-background pb-18 sm:pb-4 z-10"
       >
         {/* Suggestion pill for ChatxAI trigger */}
         {messageText.trim() === '@' && (
